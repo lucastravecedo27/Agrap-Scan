@@ -1,0 +1,14 @@
+/* Libro de códigos: A4, 3 columnas, QR de 30 mm. Se carga también en pantalla (vista
+   previa) desde app.css; aquí van las medidas físicas y lo que se oculta al imprimir. */
+
+@page { size: A4 portrait; margin: 0; }
+
+html, body { background: #fff !important; padding: 0 !important; margin: 0 !important; }
+.cabecera, .pestanas, .banda-pendientes, .lobby, .no-imprimir, .toast, .capa,
+.pantalla:not([data-pantalla="libro"]) { display: none !important; }
+main, .pantalla { padding: 0 !important; max-width: none !important; margin: 0 !important; }
+.vista-libro { display: block !important; padding: 0 !important; gap: 0 !important; overflow: visible !important; }
+.vista-libro .hoja { zoom: 1 !important; box-shadow: none !important; }
+.hoja { break-after: page; page-break-after: always; }
+.hoja:last-child { break-after: auto; page-break-after: auto; }
+* { -webkit-print-color-adjust: exact; print-color-adjust: exact; }

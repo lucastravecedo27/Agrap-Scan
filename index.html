@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Agrap Salidas</title>
+  <meta name="description" content="Registro de salidas de insumos de bodega con códigos QR.">
+  <meta name="theme-color" content="#00283f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Agrap Salidas">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="iconos/icono-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="iconos/apple-touch-icon.png">
+  <link rel="stylesheet" href="css/app.css">
+  <link rel="stylesheet" href="css/impresion.css" media="print">
+</head>
+<body data-modo="finca">
+  <!-- Lobby: lo primero que se ve. Se escoge la finca y pasa directo al escáner. -->
+  <div id="lobby" class="lobby" hidden>
+    <div class="lobby-marca">
+      <img src="iconos/simbolo-crema.svg" alt="" width="56" height="56">
+      <div>
+        <h1>Agrap Salidas</h1>
+        <p>Salidas de bodega con código QR</p>
+      </div>
+    </div>
+    <h2 class="lobby-pregunta">¿En qué finca está?</h2>
+    <div id="lobbyFincas" class="lobby-fincas"></div>
+    <div class="lobby-pie">
+      <button type="button" id="lobbyAjustes" class="btn btn-claro">Ajustes (encargado)</button>
+      <span class="version-app"></span>
+    </div>
+  </div>
+
+  <header class="cabecera">
+    <button type="button" id="btnCambiarFinca" class="cabecera-bodega" title="Cambiar de finca">
+      <span id="bodegaActiva">—</span>
+      <small id="bodegaFinca"></small>
+    </button>
+    <button type="button" id="pendientes" class="indicador" hidden></button>
+    <span class="version version-app"></span>
+  </header>
+  <div id="bandaPendientes" class="banda-pendientes" hidden></div>
+
+  <main>
+    <section class="pantalla" data-pantalla="escanear" hidden></section>
+    <section class="pantalla" data-pantalla="registros" hidden></section>
+    <section class="pantalla" data-pantalla="ajustes" hidden></section>
+  </main>
+
+  <nav class="pestanas pestanas-3" aria-label="Secciones">
+    <button type="button" class="pestana" data-ir="escanear"><span aria-hidden="true">▣</span>Escanear</button>
+    <button type="button" class="pestana" data-ir="registros"><span aria-hidden="true">☰</span>Registros</button>
+    <button type="button" class="pestana" data-ir="ajustes"><span aria-hidden="true">⚙</span>Ajustes</button>
+  </nav>
+
+  <noscript>Esta app necesita JavaScript.</noscript>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

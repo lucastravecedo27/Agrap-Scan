@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Agrap Salidas · Oficina</title>
+  <meta name="description" content="Catálogo, productos nuevos y libro de códigos QR de Agrap Salidas.">
+  <meta name="theme-color" content="#00283f">
+  <link rel="icon" href="iconos/icono-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="iconos/apple-touch-icon.png">
+  <link rel="stylesheet" href="css/app.css">
+  <link rel="stylesheet" href="css/impresion.css" media="print">
+  <script src="lib/qrcode.js" defer></script>
+</head>
+<body data-modo="oficina">
+  <header class="cabecera">
+    <div class="cabecera-bodega cabecera-oficina">
+      <span>Agrap Salidas · Oficina</span>
+      <small>Catálogo de todas las fincas · se envía a cada teléfono</small>
+    </div>
+    <span class="version version-app"></span>
+  </header>
+  <div id="bandaPendientes" hidden></div>
+  <main>
+    <section class="pantalla" data-pantalla="catalogo" hidden></section>
+    <section class="pantalla" data-pantalla="libro" hidden></section>
+  </main>
+  <nav class="pestanas pestanas-2" aria-label="Secciones">
+    <button type="button" class="pestana" data-ir="catalogo"><span aria-hidden="true">☰</span>Catálogo y productos</button>
+    <button type="button" class="pestana" data-ir="libro"><span aria-hidden="true">▤</span>Libro de QR</button>
+  </nav>
+  <noscript>Esta página necesita JavaScript.</noscript>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

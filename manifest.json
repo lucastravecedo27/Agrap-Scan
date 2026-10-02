@@ -1,0 +1,17 @@
+{
+  "name": "Agrap Salidas",
+  "short_name": "Agrap Salidas",
+  "description": "Registro de salidas de insumos de bodega con códigos QR.",
+  "lang": "es",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#153a5a",
+  "theme_color": "#00283f",
+  "icons": [
+    { "src": "iconos/icono-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "iconos/icono-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "iconos/icono-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

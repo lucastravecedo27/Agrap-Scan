@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Instalar Agrap Salidas</title>
+  <meta name="theme-color" content="#00283f">
+  <link rel="icon" href="iconos/icono-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="iconos/apple-touch-icon.png">
+  <link rel="stylesheet" href="css/app.css">
+  <style>
+    body { padding: 0; }
+    .portada { background: var(--azul-lobby); color: var(--crema); padding: calc(28px + env(safe-area-inset-top)) 18px 28px; }
+    .portada h1 { color: #fff; font-size: 1.9rem; margin: 0 0 6px; }
+    .portada p { margin: 0; color: #b8cad6; }
+    .contenido { max-width: 760px; margin: 0 auto; padding: 16px 14px 40px; }
+    ol.pasos { list-style: none; counter-reset: paso; padding: 0; margin: 0; }
+    ol.pasos > li { counter-increment: paso; position: relative; background: #fff; border-radius: 16px; box-shadow: var(--sombra); padding: 16px 16px 16px 66px; margin-bottom: 12px; }
+    ol.pasos > li::before { content: counter(paso); position: absolute; left: 16px; top: 16px; width: 36px; height: 36px; border-radius: 50%; background: var(--azul); color: #fff; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+    ol.pasos h2 { font-size: 1.15rem; margin: 4px 0 6px; }
+    ol.pasos p, ol.pasos ul { margin: 6px 0; }
+    .tecla-ios { display: inline-block; border: 2px solid var(--azul); border-radius: 8px; padding: 0 8px; font-weight: 600; color: var(--azul); white-space: nowrap; }
+    .abrir { display: flex; margin: 18px 0; }
+    .abrir .btn { flex: 1; min-height: 64px; font-size: 1.15rem; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <header class="portada">
+    <h1>Instalar Agrap Salidas</h1>
+    <p>En el iPhone de la estación de bodega · iOS 17 o superior</p>
+  </header>
+  <main class="contenido">
+    <ol class="pasos">
+      <li>
+        <h2>Abrir en Safari</h2>
+        <p>Abra esta misma dirección en <strong>Safari</strong> (no en Chrome ni dentro de WhatsApp: desde ahí no se puede instalar). Si llegó por un enlace de WhatsApp, toque los tres puntos y elija <em>Abrir en Safari</em>.</p>
+      </li>
+      <li>
+        <h2>Compartir</h2>
+        <p>Toque el botón <span class="tecla-ios">Compartir ⬆︎</span> en la barra de Safari (abajo en el iPhone).</p>
+      </li>
+      <li>
+        <h2>Agregar a pantalla de inicio</h2>
+        <p>Baje en el menú y toque <span class="tecla-ios">Agregar a pantalla de inicio ⊞</span>. Deje el nombre <strong>Agrap Salidas</strong> y toque <span class="tecla-ios">Agregar</span>.</p>
+        <p>Desde ahora abra la app <strong>siempre desde el ícono</strong>: funciona sin internet.</p>
+      </li>
+      <li>
+        <h2>Permitir la cámara</h2>
+        <p>Abra la app, escoja la finca y toque <em>Iniciar escaneo</em>. Cuando pregunte por la cámara, toque <span class="tecla-ios">Permitir</span>.</p>
+        <p>Si la negó por error: <em>Ajustes › Safari › Cámara › Permitir</em> (o <em>Ajustes › Apps › Safari › Cámara</em>) y vuelva a abrir la app.</p>
+      </li>
+      <li>
+        <h2>Pantalla siempre encendida</h2>
+        <p><em>Ajustes › Pantalla y brillo › Bloqueo automático › Nunca</em>. La app también pide mantener la pantalla encendida mientras escanea, pero este ajuste lo asegura. Deje el iPhone conectado al cargador en el soporte.</p>
+      </li>
+      <li>
+        <h2>Activar Acceso Guiado</h2>
+        <p>Así la operaria no puede salir de la app por error:</p>
+        <ul>
+          <li><em>Ajustes › Accesibilidad › Acceso Guiado</em> → actívelo y defina un código en <em>Ajustes de código</em>.</li>
+          <li>Abra Agrap Salidas y presione <strong>tres veces</strong> el botón lateral (o el botón de inicio) → <span class="tecla-ios">Iniciar</span>.</li>
+          <li>Para salir: tres veces el botón lateral y escriba el código.</li>
+        </ul>
+      </li>
+      <li>
+        <h2>Cargar los datos reales</h2>
+        <p>La primera vez la app trae un catálogo de <strong>ejemplo</strong>. En <em>Configuración</em> (PIN inicial <strong>1234</strong>, cámbielo enseguida) toque <em>Cargar paquete inicial</em> y escoja juntos <code>bodegas.csv</code>, <code>productos.csv</code> y <code>destinos.csv</code> (pásalos al iPhone por AirDrop, WhatsApp o la app Archivos). Marque «Borrar primero las bodegas de EJEMPLO».</p>
+      </li>
+      <li>
+        <h2>Imprimir el libro y probar</h2>
+        <p>En <em>Libro</em> genere e imprima el libro de su bodega (A4, tamaño real). Ponga la página de un destino bajo la cámara, luego la de un producto, digite la cantidad y Enter.</p>
+        <p>Al final del día: <em>Registros › Enviar CSV (WhatsApp…)</em>, revise las cantidades y mándelo al encargado.</p>
+      </li>
+    </ol>
+    <div class="abrir"><a class="btn primario" href="./">Abrir Agrap Salidas</a></div>
+  </main>
+</body>
+</html>

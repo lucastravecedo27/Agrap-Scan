@@ -1,0 +1,7 @@
+# Datos reales: nunca al repositorio
+Materiales/
+materiales/
+datos-iniciales/
+*.db
+.DS_Store
+node_modules/

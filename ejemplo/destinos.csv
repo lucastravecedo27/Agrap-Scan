@@ -1,0 +1,11 @@
+bodega,codigo,finca,lote,labor
+B01,001,FINCA EJEMPLO NORTE,EMPACADORA,Corte y empaque
+B01,002,FINCA EJEMPLO NORTE,LOTE 1,Embolse y protección de fruta
+B01,003,FINCA EJEMPLO NORTE,LOTE 2,Fertilización
+B01,004,FINCA EJEMPLO NORTE,LOTE 3,Control de malezas
+B01,005,FINCA EJEMPLO NORTE,GENERAL,Mantenimiento y taller
+B02,001,FINCA EJEMPLO SUR,EMPACADORA,Corte y empaque
+B02,002,FINCA EJEMPLO SUR,LOTE 1,Embolse y protección de fruta
+B02,003,FINCA EJEMPLO SUR,LOTE 2,Fertilización
+B02,004,FINCA EJEMPLO SUR,LOTE 3,Control de malezas
+B02,005,FINCA EJEMPLO SUR,GENERAL,Mantenimiento y taller
