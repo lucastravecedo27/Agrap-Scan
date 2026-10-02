@@ -473,3 +473,4 @@ html, body { overflow-x: clip; }
 .dialogo-traspaso { max-width: 640px; text-align: center; }
 .traspaso-qr svg { width: min(70vh, 520px, 86vw); height: auto; display: block; margin: 8px auto; background: #fff; }
 .traspaso-cuenta { font-weight: 700; color: var(--azul); }
+.qr-grande svg { width: 72mm; height: 72mm; } .comando { padding: 4mm 0; }
