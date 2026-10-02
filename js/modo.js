@@ -5,7 +5,7 @@ import * as db from './db.js';
 import * as usuarios from './usuarios.js';
 
 export const MODOS = {
-  salidas: { icono: '📦', nombre: 'Salidas de bodega', detalle: 'Destinos, productos y quién recibe', permiso: 'salidas' },
+  salidas: { icono: '📦', nombre: 'Salidas de bodega', detalle: 'Materiales, cantidad y quién recibe', permiso: 'salidas' },
   personal: { icono: '👷', nombre: 'Personal (jornada)', detalle: 'Carnés: inicio y fin de labores', permiso: 'jornada' },
 };
 

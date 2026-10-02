@@ -72,8 +72,11 @@ async function guardarInicio(bodega, persona, labor, plan) {
 /** Teclado grande para una cantidad. Resuelve con el número o null. */
 function pedirNumero({ titulo, subtitulo, unidad, valor = '' }) {
   let v = valor ? String(valor).replace('.', ',') : '';
+  // El valor sugerido se acepta con Enter; la primera tecla lo reemplaza (no se pega al final:
+  // con 8 sugerido, teclear 8 daba 88).
+  let sugerido = !!v;
   const visor = h('div.cantidad-visor');
-  const pintar = () => { visor.textContent = v || '0'; };
+  const pintar = () => { visor.textContent = v || '0'; visor.classList.toggle('sugerido', sugerido); };
   pintar();
   return new Promise((resolve) => {
     let cerrarDlg;
@@ -86,6 +89,7 @@ function pedirNumero({ titulo, subtitulo, unidad, valor = '' }) {
           if (n > 0) cerrarDlg(n); else { sonidoError(); visor.classList.add('sacudir'); setTimeout(() => visor.classList.remove('sacudir'), 400); }
           return;
         }
+        if (sugerido) { sugerido = false; v = ''; if (k === 'borrar') { pintar(); return; } }
         if (k === 'borrar') v = v.slice(0, -1);
         else if (k === ',') { if (!v.includes(',')) v = (v || '0') + ','; } else if (v.replace(',', '').length < 7) v = v === '0' ? k : v + k;
         pintar();

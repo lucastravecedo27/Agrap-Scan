@@ -312,12 +312,10 @@ function pedirCantidad(d, p) {
               if (!ok) { guardando = false; return; }
             }
             const previas = await despacho.lineasDe(d.id);
-            const recibe = await personas.elegir(d.bodega, {
-              subtitulo: `${p.nombre} · ${num(cant)} ${p.unidad}`,
-              sugerida: previas.length ? previas[previas.length - 1].recibe : '',
-            });
+            const recibe = await pedirQuienRecibe(d, p, cant, previas.length ? previas[previas.length - 1].recibe : '');
             if (!recibe) { guardando = false; return; } // vuelve al teclado con la cantidad
-            const l = await despacho.agregarLinea(d, p, cant, recibe);
+            const emp = (await empleados.deBodega(d.bodega)).find((e) => e.nombre === recibe);
+            const l = await despacho.agregarLinea(d, p, cant, recibe, emp?.codigo || '');
             sonidoGuardado();
             mostrarMensaje(`✓ ${l.producto} · ${num(l.cantidad)} ${l.unidad} → ${l.recibe}`, 'ok');
             cerrar();
@@ -344,6 +342,34 @@ function pedirCantidad(d, p) {
     );
     document.body.append(capa);
   });
+}
+
+/**
+ * ¿Quién recibe? Lo normal es que el trabajador ponga su CARNÉ bajo la cámara; si no lo
+ * trae, se escriben 3 letras del nombre. Resuelve con el nombre o null.
+ */
+async function pedirQuienRecibe(d, p, cant, sugerida) {
+  let escoger = null;
+  escaner.interceptor = (texto) => {
+    const m = String(texto).trim().match(RE_CARNE);
+    if (!m) return false; // un producto u otro código: se ignora mientras se espera el carné
+    empleados.porCarne(Number(m[1])).then((e) => {
+      if (!e || e.activo === false) { sonidoError(); aviso(`Carné ${m[1]} sin trabajador asignado en este teléfono.`, 'error', 4000); return; }
+      sonidoOk();
+      escoger?.(e.nombre);
+    });
+    return true;
+  };
+  try {
+    return await personas.elegir(d.bodega, {
+      subtitulo: `${p.nombre} · ${num(cant)} ${p.unidad}`,
+      aviso: '📷 Ponga el CARNÉ del trabajador bajo la cámara',
+      sugerida,
+      enlazar: (fn) => { escoger = fn; },
+    });
+  } finally {
+    escaner.interceptor = null;
+  }
 }
 
 async function digitarCodigo() {

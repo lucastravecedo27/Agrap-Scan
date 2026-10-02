@@ -94,6 +94,12 @@ export class Escaner {
     if (!texto) return false;
     const ahora = Date.now();
     if (this.pausado) {
+      // Con un diálogo que espera un código (p. ej. el carné de quien recibe), ese código
+      // pasa aunque la pantalla esté en pausa. La ventana de repetido sigue valiendo.
+      if (this.interceptor && !(texto === this.ultimo.texto && ahora - this.ultimo.t < MS_REPETIDO)) {
+        this.ultimo = { texto, t: ahora };
+        return this.interceptor(texto) !== false;
+      }
       if (texto === this.ultimo.texto) this.ultimo.t = ahora;
       return false;
     }

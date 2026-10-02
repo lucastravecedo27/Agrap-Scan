@@ -35,6 +35,7 @@ function aFila(l, bodegasPorCodigo) {
     cantidad: String(l.cantidad),
     responsable: l.responsable || '',
     recibe: l.recibe || '',
+    codigo_recibe: l.recibeCodigo || '',
   };
 }
 

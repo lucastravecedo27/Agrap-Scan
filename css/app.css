@@ -474,3 +474,13 @@ html, body { overflow-x: clip; }
 .traspaso-qr svg { width: min(70vh, 520px, 86vw); height: auto; display: block; margin: 8px auto; background: #fff; }
 .traspaso-cuenta { font-weight: 700; color: var(--azul); }
 .qr-grande svg { width: 72mm; height: 72mm; } .comando { padding: 4mm 0; }
+
+/* Número sugerido (se acepta con Enter; la primera tecla lo reemplaza) */
+.cantidad-visor.sugerido { color: #8a96a0; }
+
+/* Quién recibe: aviso de escanear el carné */
+.persona-aviso { background: var(--azul); color: #fff; border-radius: 12px; padding: 12px 14px; font-size: 1.15rem; font-weight: 700; margin-bottom: 10px; text-align: center; }
+
+/* Opciones de la lista: el detalle (código, carné) debajo del nombre */
+.persona-opcion { flex-direction: column; align-items: flex-start; gap: 2px; }
+.persona-opcion small { white-space: normal; }

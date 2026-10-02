@@ -51,17 +51,21 @@ export function crearLista({ prefijo, formatear: formatearFn = formatear, base =
   // Base fija + la de la bodega (se lee cada vez: los empleados cambian al recibirlos).
   async function cargarBase(bodega) {
     const extra = baseDe ? await baseDe(bodega) : [];
-    for (const e of extra) { canonico.set(normalizar(e.nombre), e.nombre); if (e.detalle) detalles.set(e.nombre, e.detalle); }
+    for (const e of extra) { canonico.set(normalizar(e.nombre), e.nombre); exactos.add(e.nombre); if (e.detalle) detalles.set(e.nombre, e.detalle); }
     return [...base, ...extra.map((e) => e.nombre)];
   }
   // Lo que coincide con la base (sin importar tildes ni mayúsculas) queda con la ortografía de la base.
-  const escribir = (nombre) => { const f = formatearFn(nombre); return canonico.get(normalizar(f)) || f; };
+  // Si el nombre es exactamente uno de la base, ese (hay labores que solo se distinguen por una
+  // tilde: «Desague» ≠ «Desagüe»); si no, el de la base que coincida sin tildes ni mayúsculas.
+  const exactos = new Set(base);
+  const escribir = (nombre) => { const f = formatearFn(nombre); return exactos.has(f) ? f : (canonico.get(normalizar(f)) || f); };
 
   async function listar(bodega, { soloAprendidos = false } = {}) {
     const l = await db.ajuste(clave(bodega), []);
     const todaBase = await cargarBase(bodega);
-    const vistos = new Set(l.map((p) => normalizar(p.nombre)));
-    const extra = soloAprendidos ? [] : todaBase.filter((n) => !vistos.has(normalizar(n))).map((nombre) => ({ nombre, usos: 0, ultimo: '' }));
+    // Por nombre exacto: dos de la base que solo se distinguen por una tilde salen las dos.
+    const vistos = new Set(l.map((p) => p.nombre));
+    const extra = soloAprendidos ? [] : todaBase.filter((n) => !vistos.has(n)).map((nombre) => ({ nombre, usos: 0, ultimo: '' }));
     return [...l, ...extra]
       .sort((a, b) => b.usos - a.usos || (b.ultimo || '').localeCompare(a.ultimo || '') || a.nombre.localeCompare(b.nombre, 'es'));
   }
@@ -71,7 +75,7 @@ export function crearLista({ prefijo, formatear: formatearFn = formatear, base =
     const limpio = escribir(nombre);
     if (!limpio) return '';
     const l = await db.ajuste(clave(bodega), []);
-    const ya = l.find((p) => normalizar(p.nombre) === normalizar(limpio));
+    const ya = l.find((p) => p.nombre === limpio) || (exactos.has(limpio) ? null : l.find((p) => normalizar(p.nombre) === normalizar(limpio)));
     const ahora = new Date().toISOString();
     if (ya) { ya.usos += 1; ya.ultimo = ahora; } else l.push({ nombre: limpio, usos: 1, ultimo: ahora });
     await db.fijarAjuste(clave(bodega), l);
@@ -87,7 +91,7 @@ export function crearLista({ prefijo, formatear: formatearFn = formatear, base =
    * Pantalla de elección: campo grande + sugerencias que se filtran al escribir.
    * Resuelve con el nombre escogido (ya registrado) o null si se cancela.
    */
-  async function elegir(bodega, { titulo = textos.titulo, subtitulo = '', actual = '', sugerida = '' } = {}) {
+  async function elegir(bodega, { titulo = textos.titulo, subtitulo = '', actual = '', sugerida = '', aviso: avisoArriba = '', enlazar = null } = {}) {
     const lista = await listar(bodega);
     const input = h('input.persona-input', {
       type: 'text', value: actual, placeholder: textos.placeholder,
@@ -143,12 +147,13 @@ export function crearLista({ prefijo, formatear: formatearFn = formatear, base =
 
     return dialogo({
       titulo, clase: 'dialogo-persona',
-      contenido: h('div', subtitulo ? h('p.persona-sub', subtitulo) : null, input, nota, sugerencias),
+      contenido: h('div', subtitulo ? h('p.persona-sub', subtitulo) : null, avisoArriba ? h('div.persona-aviso', avisoArriba) : null, input, nota, sugerencias),
       botones: [
         { texto: 'Cancelar', valor: null },
         { texto: 'Aceptar', clase: 'primario', valor: () => undefined, antes: async () => { await confirmar(input.value); return false; } },
       ],
-      alAbrir: (caja, c) => { cerrar = c; setTimeout(() => input.focus(), 60); },
+      // enlazar(fn): quien abre el diálogo puede escoger desde afuera (el carné leído por la cámara).
+      alAbrir: (caja, c) => { cerrar = c; if (enlazar) enlazar((nombre) => confirmar(nombre)); else setTimeout(() => input.focus(), 60); },
     });
   }
 
