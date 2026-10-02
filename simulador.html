@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Agrap Scan · Simulador de PC</title>
+  <meta name="description" content="Probar la app de la finca en el PC, sin tomar el teléfono.">
+  <link rel="icon" href="iconos/icono-192.png" type="image/png">
+  <link rel="stylesheet" href="css/app.css">
+  <style>
+    body { padding: 0; background: #e9ece6; }
+    .sim { display: grid; grid-template-columns: auto minmax(320px, 1fr); gap: 24px; max-width: 1240px; margin: 0 auto; padding: 20px; align-items: start; }
+    .sim-cabecera { background: var(--azul-profundo); color: #fff; padding: 12px 20px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+    .sim-cabecera h1 { font-size: 1.25rem; margin: 0; flex: 1; }
+    .sim-cabecera a, .sim-cabecera button { color: #fff; }
+    .telefono { width: 414px; padding: 12px; background: #1b1f23; border-radius: 44px; box-shadow: 0 10px 40px rgba(0,0,0,.25); position: sticky; top: 16px; }
+    .telefono iframe { width: 390px; height: 800px; border: 0; border-radius: 32px; background: #fff; display: block; }
+    .panel .tarjeta { margin-bottom: 16px; }
+    .lista-sim { max-height: 340px; overflow-y: auto; border: 1px solid var(--linea); border-radius: 10px; }
+    .item-sim { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--linea); }
+    .item-sim:last-child { border-bottom: 0; }
+    .item-sim small { display: block; color: var(--gris); }
+    .item-sim .btn { min-height: 40px; flex: none; }
+    .ultimo-sim { font-weight: 600; color: var(--azul); min-height: 1.4em; }
+    .fila-sim { display: flex; gap: 8px; flex-wrap: wrap; }
+    .fila-sim input { flex: 1; min-height: 48px; border: 2px solid var(--linea); border-radius: 10px; padding: 8px 12px; font: inherit; }
+    @media (max-width: 900px) { .sim { grid-template-columns: 1fr; } .telefono { position: static; margin: 0 auto; } }
+  </style>
+</head>
+<body>
+  <header class="sim-cabecera">
+    <h1>🖥 Simulador de la finca · Agrap Scan</h1>
+    <button type="button" class="btn btn-claro" id="recargar">↻ Reiniciar teléfono</button>
+    <a class="btn btn-claro" href="oficina.html" target="_blank" rel="noopener">Abrir Oficina</a>
+  </header>
+  <div class="sim">
+    <div class="telefono"><iframe id="tel" src="index.html" title="App de la finca" allow="camera"></iframe></div>
+    <div class="panel">
+      <section class="tarjeta">
+        <h2>Cómo se usa</h2>
+        <p class="nota">El teléfono de la izquierda es la app de la finca tal cual. En vez de poner un código frente a la cámara, toque <strong>Escanear</strong> en esta columna. El teclado, los diálogos y los PIN se usan con el mouse dentro del teléfono.</p>
+        <p class="nota">Los datos de este simulador quedan en este PC: no se mezclan con los del iPhone de la finca. Para tener catálogo y empleados, en el teléfono de la izquierda vaya a Ajustes › Recibir catálogo (el archivo .json de la oficina).</p>
+        <p class="ultimo-sim" id="ultimo"></p>
+      </section>
+      <section class="tarjeta">
+        <h2>Comandos y código libre</h2>
+        <div class="fila-sim">
+          <button type="button" class="btn secundario" data-codigo="CMD-CERRAR">■ CERRAR DESPACHO</button>
+          <button type="button" class="btn secundario" data-codigo="CMD-DESHACER">↶ DESHACER</button>
+        </div>
+        <form class="fila-sim" id="libre" style="margin-top:10px">
+          <input id="codigo" placeholder="Cualquier código: B01-INS-0029, CARNE-00001…" autocomplete="off">
+          <button class="btn primario" type="submit">Escanear</button>
+        </form>
+      </section>
+      <section class="tarjeta">
+        <h2 id="titMateriales">Materiales</h2>
+        <input id="buscarMat" type="search" placeholder="Buscar material…" class="fila-sim" style="width:100%;min-height:44px;border:2px solid var(--linea);border-radius:10px;padding:6px 12px;margin-bottom:8px">
+        <div class="lista-sim" id="materiales"></div>
+      </section>
+      <section class="tarjeta">
+        <h2 id="titCarnes">Carnés de trabajadores</h2>
+        <input id="buscarCar" type="search" placeholder="Buscar trabajador…" style="width:100%;min-height:44px;border:2px solid var(--linea);border-radius:10px;padding:6px 12px;margin-bottom:8px">
+        <div class="lista-sim" id="carnes"></div>
+      </section>
+    </div>
+  </div>
+  <script type="module">
+    import * as db from './js/db.js';
+    import * as catalogo from './js/catalogo.js';
+    import * as empleados from './js/empleados.js';
+    import { formatoCarne, qrProducto, qrCarne } from './js/config.js';
+    import { h, vaciar } from './js/ui.js';
+
+    const tel = document.getElementById('tel');
+    const ultimo = document.getElementById('ultimo');
+    let bodega = null; let prods = []; let emps = [];
+
+    // Lo mismo que leer un QR con la cámara: entra por el mismo escáner de la app.
+    function escanear(codigo) {
+      const app = tel.contentWindow?.agrap;
+      if (!app) { ultimo.textContent = 'La app del teléfono todavía está cargando…'; return; }
+      if (!tel.contentDocument.querySelector('#lobby')?.hidden) { ultimo.textContent = 'Primero escoja la finca y el modo en el teléfono.'; return; }
+      app.simular(codigo, { forzar: true });
+      ultimo.textContent = `Escaneado: ${codigo}`;
+    }
+
+    const boton = (codigo, texto = 'Escanear') => h('button.btn.primario', { type: 'button', onclick: () => escanear(codigo) }, texto);
+    function pintar() {
+      const qm = document.getElementById('buscarMat').value.trim().toLowerCase();
+      const qc = document.getElementById('buscarCar').value.trim().toLowerCase();
+      document.getElementById('titMateriales').textContent = `Materiales${bodega ? ` · ${bodega}` : ''} (${prods.length})`;
+      document.getElementById('titCarnes').textContent = `Carnés de trabajadores${bodega ? ` · ${bodega}` : ''} (${emps.length})`;
+      const pm = prods.filter((p) => !qm || `${p.codigo} ${p.nombre}`.toLowerCase().includes(qm)).slice(0, 150);
+      vaciar(document.getElementById('materiales')).append(...(pm.length ? pm.map((p) => h('div.item-sim', h('div', h('strong', p.nombre), h('small', `${p.codigo} · ${p.unidad} · ${p.categoria}`)), boton(qrProducto(bodega, p.codigo)))) : [h('p.vacio', { style: 'padding:12px' }, bodega ? 'Sin materiales.' : 'Escoja una finca en el teléfono.')]));
+      const pc = emps.filter((e) => !qc || `${e.nombre} ${e.codigo} ${e.carne}`.toLowerCase().includes(qc)).slice(0, 150);
+      vaciar(document.getElementById('carnes')).append(...(pc.length ? pc.map((e) => h('div.item-sim', h('div', h('strong', e.nombre), h('small', `carné ${formatoCarne(e.carne)} · cód. ${e.codigo}`)), boton(qrCarne(e.carne)))) : [h('p.vacio', { style: 'padding:12px' }, 'Sin empleados: reciba el catálogo de la oficina en Ajustes del teléfono.')]));
+    }
+    async function cargar() {
+      const b = await db.ajuste('bodegaActiva', null);
+      const p = b ? await catalogo.productos(b, { incluirInactivos: false }) : [];
+      const e = b ? (await empleados.deBodega(b)).filter((x) => x.activo !== false && x.carne) : [];
+      if (b !== bodega || p.length !== prods.length || e.length !== emps.length) { bodega = b; prods = p; emps = e; pintar(); }
+    }
+    document.querySelectorAll('[data-codigo]').forEach((b) => b.addEventListener('click', () => escanear(b.dataset.codigo)));
+    document.getElementById('libre').addEventListener('submit', (ev) => { ev.preventDefault(); const c = document.getElementById('codigo').value.trim(); if (c) escanear(c); });
+    document.getElementById('buscarMat').addEventListener('input', pintar);
+    document.getElementById('buscarCar').addEventListener('input', pintar);
+    document.getElementById('recargar').addEventListener('click', () => tel.contentWindow.location.reload());
+    await db.abrir(); await cargar(); setInterval(cargar, 2500);
+  </script>
+</body>
+</html>

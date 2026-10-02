@@ -405,4 +405,8 @@ async function digitarCodigo() {
 }
 
 /** Para pruebas y depuración: simula que la cámara leyó un código. */
-export function simular(texto) { return escaner ? escaner.entregar(texto) : false; }
+export function simular(texto, { forzar = false } = {}) {
+  if (!escaner) return false;
+  if (forzar) escaner.olvidar(); // el simulador de PC puede repetir el mismo código sin esperar 3 s
+  return escaner.entregar(texto);
+}
