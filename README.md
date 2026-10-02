@@ -13,10 +13,10 @@ HTML, CSS y JavaScript nativos, sin backend; funciona 100 % offline (IndexedDB +
 
 1. **Oficina** carga el paquete inicial (`bodegas.csv`, `productos.csv`, `destinos.csv`), imprime el libro de cada bodega y manda `catalogo_….json` por WhatsApp.
 2. **Finca** (encargado): Ajustes › Recibir catálogo de la oficina.
-3. **Operaria**: escoge la finca, pone la página del destino bajo la cámara, luego la de cada producto y digita la cantidad.
+3. **Operaria**: escoge la finca, pone la página del destino bajo la cámara, luego la de cada producto, digita la cantidad y escoge **quién recibe** (la app aprende los nombres: con 2–3 letras los sugiere).
 4. **Fin del día**: Registros › Enviar CSV → revisión editable → menú de compartir (WhatsApp) o descarga.
 
-CSV de salida: `fecha,hora,bodega,despacho_id,finca,lote,labor,codigo_producto,producto,unidad,cantidad,responsable`
+CSV de salida: `fecha,hora,bodega,despacho_id,finca,lote,labor,codigo_producto,producto,unidad,cantidad,responsable,recibe`
 (`salidas_AAAAMMDD_Bxx.csv` o `salidas_AAAAMMDD_todas.csv`).
 
 ## Códigos QR

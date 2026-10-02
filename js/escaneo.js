@@ -3,6 +3,7 @@
 
 import * as despacho from './despacho.js';
 import * as bodegas from './bodegas.js';
+import * as personas from './personas.js';
 import { Escaner, mantenerPantalla } from './scanner.js';
 import {
   $, h, vaciar, num, aviso, confirmar, dialogo, tecladoNumerico,
@@ -121,7 +122,8 @@ export async function refrescar() {
   if (ultima) {
     ult.append(h('small', 'Último registrado'),
       h('div.ultimo-nombre', ultima.producto),
-      h('div.ultimo-cant', `${num(ultima.cantidad)} ${ultima.unidad}`));
+      h('div.ultimo-cant', `${num(ultima.cantidad)} ${ultima.unidad}`),
+      ultima.recibe ? h('div.ultimo-recibe', `→ ${ultima.recibe}`) : null);
   } else if (d) {
     ult.append(h('div.ultimo-vacio', '② Escanee un PRODUCTO'));
   }
@@ -233,9 +235,15 @@ function pedirCantidad(d, p) {
                 { si: 'Sí, guardar', no: 'Corregir' });
               if (!ok) { guardando = false; return; }
             }
-            const l = await despacho.agregarLinea(d, p, cant);
+            const previas = await despacho.lineasDe(d.id);
+            const recibe = await personas.elegir(d.bodega, {
+              subtitulo: `${p.nombre} · ${num(cant)} ${p.unidad}`,
+              sugerida: previas.length ? previas[previas.length - 1].recibe : '',
+            });
+            if (!recibe) { guardando = false; return; } // vuelve al teclado con la cantidad
+            const l = await despacho.agregarLinea(d, p, cant, recibe);
             sonidoGuardado();
-            mostrarMensaje(`✓ ${l.producto} · ${num(l.cantidad)} ${l.unidad}`, 'ok');
+            mostrarMensaje(`✓ ${l.producto} · ${num(l.cantidad)} ${l.unidad} → ${l.recibe}`, 'ok');
             cerrar();
           } catch (e) {
             guardando = false;

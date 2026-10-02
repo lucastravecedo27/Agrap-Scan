@@ -34,6 +34,7 @@ function aFila(l, bodegasPorCodigo) {
     // Punto decimal: el separador de columnas es la coma.
     cantidad: String(l.cantidad),
     responsable: l.responsable || '',
+    recibe: l.recibe || '',
   };
 }
 
@@ -107,7 +108,7 @@ export async function revisar(lineas, titulo) {
       ls.map((l) => {
         const input = h('input.revision-cant', { type: 'text', inputmode: 'decimal', value: num(l.cantidad).replace(/\./g, ''), disabled: !!l.exportado, 'aria-label': `Cantidad de ${l.producto}` });
         const fila = h('div.revision-linea', { class: l.exportado ? 'exportada' : '' },
-          h('div.revision-prod', h('div', l.producto), h('small', `${l.codigo} · ${l.fecha} ${l.hora.slice(0, 5)}${l.exportado ? ' · ya exportada' : ''}${l.cantidadOriginal != null ? ` · antes ${num(l.cantidadOriginal)}` : ''}`)),
+          h('div.revision-prod', h('div', l.producto), h('small', `${l.codigo} · ${l.fecha} ${l.hora.slice(0, 5)}${l.recibe ? ` · recibe ${l.recibe}` : ''}${l.exportado ? ' · ya exportada' : ''}${l.cantidadOriginal != null ? ` · antes ${num(l.cantidadOriginal)}` : ''}`)),
           h('div.revision-edit', input, h('span.revision-und', l.unidad)),
           l.exportado ? h('span') : h('button.btn.mini.quitar', {
             type: 'button', 'aria-label': `Quitar ${l.producto}`,
@@ -284,8 +285,8 @@ async function pintar() {
       h('table.tabla', h('thead', h('tr', h('th', 'Código'), h('th', 'Producto'), h('th.num', 'Total'), h('th', 'Und.'))),
         h('tbody', totales.map((t) => h('tr', h('td', t.codigo), h('td', t.producto), h('td.num', num(t.cantidad)), h('td', t.unidad))))),
       h('h4', 'Líneas'),
-      h('table.tabla', h('thead', h('tr', h('th', 'Hora'), h('th', 'Producto'), h('th.num', 'Cant.'), h('th', 'Estado'))),
-        h('tbody', lineas.map((l) => h('tr', h('td', l.hora.slice(0, 5)), h('td', l.producto), h('td.num', `${num(l.cantidad)} ${l.unidad}`), h('td', l.exportado ? 'Exportada' : 'Pendiente'))))),
+      h('table.tabla', h('thead', h('tr', h('th', 'Hora'), h('th', 'Producto'), h('th.num', 'Cant.'), h('th', 'Recibe'), h('th', 'Estado'))),
+        h('tbody', lineas.map((l) => h('tr', h('td', l.hora.slice(0, 5)), h('td', l.producto), h('td.num', `${num(l.cantidad)} ${l.unidad}`), h('td', l.recibe || '—'), h('td', l.exportado ? 'Exportada' : 'Pendiente'))))),
       lineas.some((l) => !l.exportado) ? h('button.btn.secundario', {
         type: 'button',
         onclick: async () => {

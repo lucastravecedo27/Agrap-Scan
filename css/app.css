@@ -329,3 +329,25 @@ details summary { cursor: pointer; font-weight: 600; color: var(--azul); min-hei
 .cabecera-oficina { cursor: default; }
 .cabecera-oficina span { font-size: 1.25rem; font-weight: 700; }
 .pestanas-3 { grid-template-columns: repeat(3, 1fr); }
+
+/* ---------- ¿Quién recibe? ---------- */
+.franja-recibe { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,.2); font-size: 1.15rem; font-weight: 700; }
+.franja-recibe span { display: flex; flex-direction: column; }
+.franja-recibe small { color: #b8cad6; font-size: .72rem; font-weight: 400; text-transform: uppercase; letter-spacing: .04em; }
+.btn-cambiar { background: rgba(255,255,255,.15) !important; color: #fff !important; border-color: rgba(255,255,255,.4) !important; }
+.dialogo-persona { max-width: 600px; }
+.persona-sub { color: var(--gris); margin: -4px 0 10px; }
+.persona-input { width: 100%; min-height: 64px; font-size: 1.6rem; font-weight: 600; border: 3px solid var(--azul); border-radius: 14px; padding: 8px 16px; }
+.persona-input:focus { outline: none; border-color: var(--azul-vivo); }
+.persona-nota { color: var(--gris); font-size: .95rem; min-height: 1.3em; margin: 8px 0; }
+.persona-sugerencias { display: flex; flex-direction: column; gap: 8px; max-height: 46vh; overflow-y: auto; }
+.persona-opcion { display: flex; justify-content: space-between; align-items: center; gap: 10px; min-height: 64px; padding: 10px 16px; border-radius: 14px; border: 2px solid var(--linea); background: var(--blanco); font-size: 1.35rem; font-weight: 700; color: var(--azul-profundo); text-align: left; cursor: pointer; touch-action: manipulation; }
+.persona-opcion:active { background: #e8edf1; }
+.persona-opcion small { font-size: .85rem; font-weight: 400; color: var(--gris); white-space: nowrap; }
+.persona-opcion.persona-nueva { border-style: dashed; border-color: var(--azul); color: var(--azul); }
+.persona-opcion.persona-misma { background: var(--azul); color: #fff; border-color: var(--azul); }
+.persona-opcion.persona-misma small { color: #b8cad6; }
+.ultimo-recibe { font-size: 1.2rem; font-weight: 600; color: var(--verde); }
+/* En el iPhone el teclado tapa la mitad de abajo: el diálogo del nombre va arriba. */
+.capa:has(.dialogo-persona) { align-items: flex-start; padding-top: calc(10px + var(--seguro-arriba)); }
+.dialogo-persona .persona-sugerencias { max-height: 34vh; }

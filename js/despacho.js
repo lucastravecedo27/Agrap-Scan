@@ -96,7 +96,7 @@ export async function revisarCantidad(bodega, codigo, cantidad) {
   return null;
 }
 
-export async function agregarLinea(despacho, producto, cantidad) {
+export async function agregarLinea(despacho, producto, cantidad, recibe = '') {
   if (!(cantidad > 0)) throw new Error('La cantidad debe ser mayor que cero.');
   const ahora = new Date();
   const b = await bodegas.obtener(despacho.bodega);
@@ -107,6 +107,7 @@ export async function agregarLinea(despacho, producto, cantidad) {
     cantidad: Math.round(cantidad * 1000) / 1000,
     finca: despacho.finca, lote: despacho.lote, labor: despacho.labor,
     responsable: b?.responsable || despacho.responsable || '',
+    recibe,
     exportado: 0, exportadoEn: null,
   };
   linea.n = await db.put('lineas', linea);

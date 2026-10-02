@@ -4,6 +4,7 @@
 import * as db from './db.js';
 import * as bodegas from './bodegas.js';
 import * as catalogo from './catalogo.js';
+import * as personas from './personas.js';
 import { VERSION, COLUMNAS_PRODUCTOS, COLUMNAS_DESTINOS } from './config.js';
 import {
   h, vaciar, num, aviso, confirmar, dialogo, formulario, informar, pedirPin,
@@ -52,6 +53,7 @@ async function pintarFinca() {
     h('p', recibido ? `Último catálogo recibido: ${new Date(recibido).toLocaleString('es-CO')}` : 'Todavía no se ha recibido catálogo de la oficina.'),
     h('ul.resumen', resumen),
     h('button.btn.primario.btn-grande', { type: 'button', onclick: recibirCatalogo }, '⇩ Recibir catálogo de la oficina')));
+  raiz.append(await seccionPersonas());
   const sonido = await db.ajuste('sonido', true);
   const probar = (fn) => () => { desbloquearAudio(); fijarSonido(true); fn(); fijarSonido(chkSonido.checked); };
   const chkSonido = h('input', { type: 'checkbox', checked: sonido, onchange: async (e) => { await db.fijarAjuste('sonido', e.target.checked); fijarSonido(e.target.checked); aviso('Guardado', 'ok'); } });
@@ -64,6 +66,24 @@ async function pintarFinca() {
       h('button.btn.secundario', { type: 'button', onclick: probar(sonidoError) }, '🔊 Pito de error')),
     h('p.nota', 'Suba el volumen del iPhone con los botones laterales. El pito suena aunque el interruptor de silencio esté puesto.')));
   raiz.append(await seccionAjustes());
+}
+
+async function seccionPersonas() {
+  const bod = await bodegas.bodegaActiva();
+  const lista = bod ? await personas.listar(bod) : [];
+  return h('section.tarjeta',
+    h('h2', `Personas que reciben${bod ? ` · ${bod}` : ''}`),
+    h('p.nota', 'La app las aprende sola al escribirlas en cada despacho. Borre aquí las que quedaron mal escritas.'),
+    lista.length ? h('div.tabla-scroll.corta', h('table.tabla',
+      h('thead', h('tr', h('th', 'Nombre'), h('th.num', 'Entregas'), h('th', ''))),
+      h('tbody', lista.map((p) => h('tr', h('td', p.nombre), h('td.num', p.usos),
+        h('td.acciones-celda', h('button.btn.mini', {
+          type: 'button',
+          onclick: async () => {
+            if (!(await confirmar('¿Borrar nombre?', `«${p.nombre}» deja de salir en las sugerencias. Los registros ya hechos no cambian.`, { si: 'Borrar', peligro: true }))) return;
+            await personas.eliminar(bod, p.nombre); pintarFinca();
+          },
+        }, 'Borrar'))))))) : h('p.vacio', 'Todavía no hay nombres.'));
 }
 
 async function recibirCatalogo() {
