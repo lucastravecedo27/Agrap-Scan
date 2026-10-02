@@ -388,3 +388,7 @@ body[data-modo="personal"] .solo-salidas, body[data-modo="personal"] .acumulado-
 body[data-modo="personal"] #pendientes, body[data-modo="personal"] #bandaPendientes { display: none !important; }
 .lobby-modo { grid-template-columns: auto 1fr; min-height: 120px; }
 .lobby-icono { grid-row: span 2; font-size: 2.6rem; line-height: 1; }
+/* Teléfono: nada más ancho que la pantalla; las tablas anchas se desplazan dentro de su tarjeta. */
+html, body { overflow-x: hidden; }
+.tarjeta { max-width: 100%; overflow-x: auto; }
+.capa .dialogo { max-width: min(600px, calc(100vw - 24px)); }

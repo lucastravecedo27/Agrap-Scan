@@ -23,7 +23,7 @@ const porEtiqueta = new Map(LABORES_NOMINA.map((l) => [l.etiqueta, l]));
 const listaLabores = crearLista({
   prefijo: 'laboresNomina',
   formatear: (t) => String(t || '').replace(/\s+/g, ' ').trim(),
-  base: LABORES_NOMINA.map((l) => l.etiqueta),
+  base: LABORES_NOMINA.filter((l) => l.escaneable).map((l) => l.etiqueta),
   enterPrimera: true,
   cerrada: true,
   detalle: (n) => (porEtiqueta.get(n) ? `${porEtiqueta.get(n).codigo} · ${porEtiqueta.get(n).unidad}` : ''),
@@ -156,7 +156,8 @@ async function flujoInicio(bodega, persona) {
   const labor = etiqueta && porEtiqueta.get(etiqueta);
   if (!labor) return { texto: 'Jornada no iniciada.', tipo: '' };
   const plan = await pedirNumero({
-    titulo: `¿Cuántas ${labor.unidad}?`, subtitulo: `${persona.nombre} · ${labor.nombre} (${labor.codigo})`,
+    titulo: labor.und === 'hora' ? '¿Cuántas horas va a trabajar?' : `¿Cuánto va a hacer hoy? (en ${labor.unidad})`,
+    subtitulo: `${persona.nombre} · ${labor.nombre} (${labor.codigo})`,
     unidad: labor.unidad, valor: labor.und === 'hora' ? 8 : '',
   });
   if (plan == null) return { texto: 'Jornada no iniciada.', tipo: '' };
@@ -211,6 +212,9 @@ export async function alEscanearCarne(carne, bodega) {
     }
     persona = { carne: n, codigo: emp.codigo, nombre: emp.nombre };
   } else {
+    if (!(await empleados.deBodega(bodega)).length) {
+      return { texto: `Este teléfono no tiene la lista de empleados de ${bodega}. Ajustes (encargado) › Recibir catálogo de la oficina, o Abrir Oficina en esta app.`, tipo: 'error' };
+    }
     const pendiente = (await ingresos.deCarne(n)) || (await registrarIngreso(n, bodega));
     if (!pendiente) return { texto: `Carné ${formatoCarne(n)}: ingreso no registrado.`, tipo: '' };
     persona = { carne: n, codigo: '', nombre: `Nuevo · carné ${formatoCarne(n)}` };
@@ -282,7 +286,11 @@ export async function alMostrar() {
   const lotesTxt = (j) => (j.lotes?.length ? ` · lote ${j.lotes.map((l) => (j.lotes.length > 1 ? `${l.lote} (${num(l.cantidad)})` : l.lote)).join(', ')}` : '');
   const selDia = h('select', dias.map((d) => h('option', { value: d }, d === h0 ? `Hoy (${d})` : d)));
 
+  const sinEmpleados = !(await empleados.deBodega(bod)).length;
   raiz.append(
+    sinEmpleados ? h('section.tarjeta.tarjeta-alerta',
+      h('h2', '⚠ Este teléfono no tiene empleados cargados'),
+      h('p.nota', 'Los carnés no se reconocen hasta que llegue la lista. Ajustes (encargado) › Recibir catálogo de la oficina (archivo catalogo_….json). Si la oficina se maneja en este mismo teléfono: Ajustes › Abrir Oficina en esta app, importe allí el CSV de empleados.')) : null,
     h('div.kpis',
       kpi(String(abiertas.length), 'En labor ahora'),
       kpi(String(personas), 'Personas hoy'),

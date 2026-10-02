@@ -7,6 +7,8 @@ const UNIDADES = {
   mts: 'metros', tonelada: 't', bulto: 'bultos', jornal: 'jornales', prestacion: 'prestación', semilla: 'semillas',
   kilo: 'kg', palma: 'palmas',
 };
+// Conceptos de pago que no se escanean (los define nómina, no la persona en campo).
+const NO_ES_LABOR = /festivo|dominical|promediado|auxilio|bonificaci|saldo pendiente|retroactivo|ajuste de|anticipo|vacaci|incapacidad|licencia|permiso|cesant|prima |intereses|compensatorio|ausente|suspendid|descanso|devoluci|menor valor|indemniz|liquidaci|aporte|\bh\.?\s?e\.?\s?[dn]\b/i;
 // Unidades que se reportan por lote en el RDT (lote + área/cantidad).
 const POR_LOTE = new Set(['hectarea', 'unidad', 'racimo', 'metro', 'mts', 'palma', 'semilla']);
 
@@ -1608,4 +1610,6 @@ export const LABORES_NOMINA = FILAS.map(([codigo, nombre, und]) => ({
   porLote: POR_LOTE.has(und),
   // Dos labores con el mismo nombre se distinguen por el código.
   etiqueta: repetidos.has(nombre.toLowerCase()) ? `${nombre} (${codigo})` : nombre,
+  // Se ofrece al escanear un carné: labores reales, sin conceptos de pago ni unidades por día.
+  escaneable: !NO_ES_LABOR.test(nombre) && !['dia', 'prestacion'].includes(und),
 }));

@@ -603,6 +603,8 @@ async function seccionAjustes() {
   const pinFinca = await db.ajuste('pinCambioFinca', true);
   return h('section.tarjeta',
     h('h2', 'Seguridad, respaldo y versión'),
+    modo === 'finca' ? h('div.fila-botones', h('a.btn.secundario', { href: './oficina.html' }, '🏢 Abrir Oficina en esta app')) : h('div.fila-botones', h('a.btn.secundario', { href: './' }, '← Volver a la app de la finca')),
+    modo === 'finca' ? h('p.nota', 'En el iPhone la app instalada guarda sus datos aparte de Safari: si maneja la oficina en este teléfono, ábrala desde aquí para que empleados y catálogo queden en la app.') : null,
     h('div.fila-botones',
       h('button.btn.primario', { type: 'button', onclick: cambiarPin }, 'Cambiar PIN'),
       h('button.btn.secundario', { type: 'button', onclick: () => { bodegas.salirAdmin(); alMostrar(); } }, 'Salir del modo administrador')),
