@@ -1,7 +1,7 @@
 {
-  "name": "Agrap Salidas",
-  "short_name": "Agrap Salidas",
-  "description": "Registro de salidas de insumos de bodega con códigos QR.",
+  "name": "Agrap Scan",
+  "short_name": "Agrap Scan",
+  "description": "Salidas de bodega y jornada del personal con códigos QR.",
   "lang": "es",
   "start_url": "./",
   "scope": "./",

@@ -1,4 +1,4 @@
-# Agrap Salidas
+# Agrap Scan
 
 PWA para registrar salidas de insumos de bodega en fincas de banano con códigos QR.
 HTML, CSS y JavaScript nativos, sin backend; funciona 100 % offline (IndexedDB + service worker).

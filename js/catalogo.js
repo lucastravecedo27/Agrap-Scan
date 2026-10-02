@@ -284,7 +284,7 @@ export async function exportarActualizacion(codigosBodega) {
 }
 
 export function validarActualizacion(json) {
-  if (!json || json.app !== 'agrap-salidas' || json.tipo !== 'catalogo') throw new Error('El archivo no es un catálogo de Agrap Salidas (debe venir de la página de oficina).');
+  if (!json || json.app !== 'agrap-salidas' || json.tipo !== 'catalogo') throw new Error('El archivo no es un catálogo de Agrap Scan (debe venir de la página de oficina).');
   for (const k of ['bodegas', 'productos', 'destinos']) if (!Array.isArray(json[k])) throw new Error(`Archivo incompleto: falta «${k}».`);
   return { bodegas: json.bodegas.length, productos: json.productos.length, destinos: json.destinos.length, usuarios: json.usuarios?.length ?? 0, empleados: json.empleados?.length ?? 0, fecha: json.fecha };
 }

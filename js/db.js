@@ -101,7 +101,7 @@ export async function exportarTodo() {
 }
 
 export async function restaurarTodo(json) {
-  if (!json || json.app !== 'agrap-salidas' || !json.datos) throw new Error('El archivo no es un respaldo de Agrap Salidas.');
+  if (!json || json.app !== 'agrap-salidas' || !json.datos) throw new Error('El archivo no es un respaldo de Agrap Scan.');
   for (const n of ALMACENES) if (!Array.isArray(json.datos[n])) throw new Error(`Respaldo incompleto: falta «${n}».`);
   await tx(ALMACENES, 'readwrite', async (s) => {
     for (const n of ALMACENES) {

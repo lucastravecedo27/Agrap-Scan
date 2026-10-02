@@ -615,7 +615,7 @@ async function seccionAjustes() {
       h('button.btn.secundario', { type: 'button', onclick: respaldar }, '↓ Descargar respaldo'),
       h('button.btn.peligro', { type: 'button', onclick: restaurar }, '⇧ Restaurar respaldo…')),
     h('h3', 'Versión'),
-    h('p', `Agrap Salidas v${VERSION}`),
+    h('p', `Agrap Scan v${VERSION}`),
     h('button.btn.secundario', { type: 'button', onclick: buscarActualizacion }, 'Buscar actualización'));
 }
 

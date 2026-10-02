@@ -45,7 +45,7 @@ function pagina(bodega, seccion, contenido) {
     h('header.hoja-cab',
       h('div.hoja-bodega', `${bodega.codigo} · ${bodega.nombre}`),
       h('div.hoja-seccion', seccion),
-      h('div.hoja-app', 'Agrap Salidas')),
+      h('div.hoja-app', 'Agrap Scan')),
     contenido,
     h('footer.hoja-pie'));
 }
