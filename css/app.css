@@ -447,3 +447,24 @@ html, body { overflow-x: clip; }
   .kpi-valor { font-size: 1.7rem; }
   .kpi-rotulo { font-size: .82rem; }
 }
+
+/* Libro: ningún texto se encoge ni se monta sobre otro. QR de 28 mm (se lee igual) para que
+   quepan nombres de dos líneas y los destinos con finca, lote y labor. */
+.celda { padding: 2mm 2.5mm 1.5mm; }
+.celda > * { flex-shrink: 0; }
+.qr svg { width: 28mm; height: 28mm; }
+.celda-nombre { font-size: 9.5pt; line-height: 1.1; margin-top: 1mm; max-height: 2.2em; }
+.celda-linea { font-size: 8.5pt; line-height: 1.12; }
+.celda-destino .qr svg { width: 25mm; height: 25mm; }
+.celda-destino .celda-nombre { max-height: 1.15em; }
+
+/* Botón Atrás de la cabecera (volver a escoger Salidas o Personal). */
+.btn-atras {
+  flex: none; display: inline-flex; align-items: center; gap: 4px; min-height: 44px; padding: 0 12px 0 10px;
+  border-radius: 12px; border: 2px solid rgba(255,255,255,.35); background: rgba(255,255,255,.1);
+  color: #fff; font-size: 1.25rem; font-weight: 700; cursor: pointer; touch-action: manipulation;
+}
+.btn-atras span { font-size: .9rem; }
+.btn-atras:active { background: rgba(255,255,255,.25); }
+@media (max-width: 380px) { .btn-atras span { display: none; } }
+@media (max-width: 600px) { .cabecera > .version { display: none; } }

@@ -156,6 +156,21 @@ async function escogerFinca(b) {
   await entrar(d[0] || 'salidas');
 }
 
+/**
+ * Botón Atrás de la cabecera: vuelve a «¿qué va a registrar?» de la misma finca para pasar
+ * de Personal (labores) a Salidas (materiales) y al revés. Con un solo modo, al lobby.
+ */
+async function volverAModos() {
+  const b = await bodegas.obtener(await bodegas.bodegaActiva());
+  const d = await modo.disponibles();
+  if (!b || d.length < 2) { mostrarLobby(); return; }
+  if (actual && PANTALLAS[actual].alOcultar) PANTALLAS[actual].alOcultar();
+  actual = null;
+  $('#lobby').hidden = false;
+  document.body.classList.add('en-lobby');
+  mostrarModos(b, d);
+}
+
 /** Segunda pregunta del inicio: qué va a registrar en esta finca. */
 async function mostrarModos(b, disponibles) {
   const cont = vaciar($('#lobbyFincas'));
@@ -198,6 +213,7 @@ async function iniciar() {
     jornada.montar($('[data-pantalla=jornada]'), { alCambiarDatos: cambio });
     configuracion.montar($('[data-pantalla=ajustes]'), { alCambiarDatos: cambio, modo: 'finca' });
     $('#btnCambiarFinca').addEventListener('click', mostrarLobby);
+    $('#btnAtras').addEventListener('click', volverAModos);
     $('#lobbyAjustes').addEventListener('click', async () => { cerrarLobby(); await refrescarCabecera(); await irA('ajustes'); });
     $('#pendientes').addEventListener('click', () => irA('registros'));
   } else {
