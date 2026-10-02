@@ -45,6 +45,8 @@ async function pintarFinca() {
   if (await bodegas.pinEsPorDefecto()) {
     raiz.append(h('div.alerta.alerta-aviso', h('strong', 'El PIN sigue siendo 1234.'), ' Cámbielo abajo para que nadie más cambie la finca.'));
   }
+  const faltaRespaldo = await avisoRespaldo();
+  if (faltaRespaldo) raiz.append(h('div.alerta.alerta-aviso', h('strong', `⚠ ${faltaRespaldo}`), ' Si el teléfono se pierde o se daña, se pierde lo que no se haya exportado. Abajo: «Descargar respaldo».'));
   const lista = await bodegas.listar();
   const recibido = await db.ajuste('catalogoRecibido', null);
   const hayEjemplo = lista.some((b) => b.ejemplo);
@@ -661,6 +663,18 @@ async function cambiarPin() {
 async function respaldar() {
   const json = await db.exportarTodo();
   descargar(`respaldo_agrap_salidas_${hoy().replace(/-/g, '')}.json`, JSON.stringify(json), 'application/json');
+  await db.fijarAjuste('ultimoRespaldo', new Date().toISOString());
+  aviso('Respaldo descargado. Guárdelo fuera del teléfono (Archivos, Drive o WhatsApp a la oficina).', 'ok', 6000);
+}
+
+/** Aviso si hay registros y el último respaldo tiene más de 7 días (o nunca se hizo). */
+export async function avisoRespaldo() {
+  const hay = (await db.contar('lineas')) + (await db.contar('jornadas'));
+  if (!hay) return null;
+  const ult = await db.ajuste('ultimoRespaldo', null);
+  const dias = ult ? Math.floor((Date.now() - new Date(ult)) / 86400000) : null;
+  if (dias != null && dias < 7) return null;
+  return dias == null ? 'Este teléfono nunca ha hecho un respaldo.' : `El último respaldo fue hace ${dias} días.`;
 }
 
 async function restaurar() {

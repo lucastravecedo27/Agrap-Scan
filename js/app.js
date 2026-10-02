@@ -84,6 +84,8 @@ async function mostrarLobby() {
       h('span.lobby-nombre', b.nombre),
       h('span.lobby-sub', [b.finca !== b.nombre ? b.finca : '', b.codigo === activa ? 'Última usada' : '', b.ejemplo ? 'Ejemplo' : ''].filter(Boolean).join(' · '))));
   }
+  const faltaRespaldo = await configuracion.avisoRespaldo();
+  if (faltaRespaldo) cont.append(h('p.lobby-respaldo', `💾 ${faltaRespaldo} Ajustes (encargado) › Descargar respaldo.`));
   if (s) {
     cont.append(h('button.btn.btn-claro.lobby-salir', {
       type: 'button',
