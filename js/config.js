@@ -1,6 +1,6 @@
 // Configuración global de la app. Lo que cambia por versión o por regla de negocio vive aquí.
 
-export const VERSION = '1.6.0';
+export const VERSION = '1.7.0';
 
 export const PIN_POR_DEFECTO = '1234';
 
@@ -38,13 +38,13 @@ export const CMD_DESHACER = 'CMD-DESHACER';
 
 export const qrProducto = (bodega, codigo) => `${bodega}-INS-${codigo}`;
 export const qrDestino = (bodega, codigo) => `${bodega}-DST-${codigo}`;
-// Carné de empleado: el código de nómina, igual en todas las fincas.
-export const RE_EMP = /^EMP-(.+)$/i;
-export const qrEmpleado = (codigo) => `EMP-${codigo}`;
-
-export const COLUMNAS_JORNADAS = [
-  'fecha', 'finca', 'codigo_empleado', 'empleado', 'codigo_labor', 'labor', 'unidad',
-  'cantidad_plan', 'cantidad_real', 'hora_inicio', 'hora_fin', 'horas_reales', 'registro_inicio', 'registro_fin',
-];
+// Carné de jornada: número consecutivo que da la oficina. Se imprime en blanco para las
+// fincas y se asigna a la persona cuando la oficina la registra.
+export const RE_CARNE = /^CARNE-(\d+)$/i;
+export const formatoCarne = (n) => String(Number(n)).padStart(5, '0');
+export const qrCarne = (n) => `CARNE-${formatoCarne(n)}`;
+// RDT: filas de datos desde la 13; hasta 4 lotes por fila (los que suma «Unidades a pagar»).
+export const RDT_FILA_INICIAL = 13;
+export const RDT_LOTES = [['O', 'P'], ['S', 'T'], ['W', 'X'], ['AA', 'AB']];
 // Jornada: alerta si la cantidad real se aleja más de esta fracción de la planeada.
 export const DESVIO_JORNADA = 0.25;

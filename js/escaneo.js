@@ -7,7 +7,7 @@ import * as personas from './personas.js';
 import * as labores from './labores.js';
 import * as jornada from './jornada.js';
 import * as usuarios from './usuarios.js';
-import { RE_EMP } from './config.js';
+import { RE_CARNE } from './config.js';
 import * as db from './db.js';
 import { Escaner, mantenerPantalla } from './scanner.js';
 import {
@@ -151,7 +151,7 @@ export async function procesar(texto) {
     const bod = await bodegas.bodegaActiva();
     if (!bod) { error('No hay bodega activa.'); return; }
     // Carné de empleado: jornada (inicio o fin de labor).
-    const carne = String(texto || '').trim().match(RE_EMP);
+    const carne = String(texto || '').trim().match(RE_CARNE);
     if (carne) {
       if (!(await usuarios.permite('jornada'))) { error('Su usuario no registra jornadas.'); return; }
       sonidoOk();

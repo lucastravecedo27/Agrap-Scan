@@ -16,15 +16,15 @@ HTML, CSS y JavaScript nativos, sin backend; funciona 100 % offline (IndexedDB +
 3. **Operaria**: escoge la finca, pone la página del destino bajo la cámara (si el destino es solo un lote, escoge **la labor**), luego la de cada producto, digita la cantidad y escoge **quién recibe**. Labores y nombres se aprenden: desde la 3.ª letra se sugieren y quedan bien escritos («CONTROL DE MALEZA AL DIA» → «Control de maleza»).
 4. **Fin del día**: Registros › Enviar CSV → revisión editable → menú de compartir (WhatsApp) o descarga.
 
-## Jornada (horas reales por persona)
+## Jornada (horas reales por persona) → RDT
 
-1. **Oficina › Empleados**: importa `codigo,nombre,finca` (código de nómina) e imprime los carnés (Libro › Carnés). Viajan en el catálogo; nunca van al repositorio.
-2. **Inicio**: el empleado escanea su carné (`EMP-71529`) → escoge la labor de nómina con 3 letras (161 labores con código y unidad de pago, `js/labores-nomina.js`) → cantidad planeada (horas, cajas, racimos, ha…).
-3. **Fin**: vuelve a escanear → confirma la cantidad real (si es por horas, la app propone las horas reales) → puede iniciar otra labor.
-4. **Jornada**: en labor ahora, terminadas hoy, sin cerrar de días anteriores y **Enviar CSV de jornadas**:
-   `fecha,finca,codigo_empleado,empleado,codigo_labor,labor,unidad,cantidad_plan,cantidad_real,hora_inicio,hora_fin,horas_reales,registro_inicio,registro_fin`
+1. **Oficina › Empleados** (solo la oficina registra): importa `codigo,nombre,finca[,cedula]`; cada empleado recibe un carné (`CARNE-00001`). Imprime carnés con nombre y **carnés en blanco** para cada finca.
+2. **Persona nueva en la finca**: escanea un carné en blanco → fotos de la cédula y de la persona → ya puede trabajar. Jornada › **Enviar ingresos a la oficina** (`ingresos_….json`).
+3. **Oficina › Personas nuevas**: recibe el archivo, ve las fotos y registra código Agrosoft, nombre y cédula con ese carné. Vuelve a la finca con el catálogo.
+4. **Labor**: escanear el carné → labor de `Lista_Labores` (Agrosoft, 1.586, `js/labores-nomina.js`) con 3 letras → cantidad planeada. Al terminar: cantidad real y, si la labor es por hectárea/unidad/racimo/metro, los lotes (hasta 4).
+5. **Jornada › Descargar RDT**: llena `plantillas/rdt.xlsx` (plantilla real sin datos personales) con encabezado (código de finca, periodo, fecha, año, semana), una fila por persona y labor, lotes y la hoja `lista_trabajadores`. Fórmulas, tablas y validaciones quedan intactas.
 
-Cada usuario tiene permisos: salidas, jornada o ambos.
+Cada usuario tiene permisos: salidas, jornada o ambos. `lib/jszip.min.js` (MIT) arma el Excel en el teléfono.
 
 CSV de salida: `fecha,hora,bodega,despacho_id,finca,lote,labor,codigo_producto,producto,unidad,cantidad,responsable,recibe`
 (`salidas_AAAAMMDD_Bxx.csv` o `salidas_AAAAMMDD_todas.csv`).

@@ -6,6 +6,7 @@ import * as bodegas from './bodegas.js';
 import * as labores from './labores.js';
 import * as usuarios from './usuarios.js';
 import * as empleados from './empleados.js';
+import * as ingresos from './ingresos.js';
 import { aObjetos } from './csv.js';
 import { RE_BODEGA, MIN_LINEAS_HISTORIAL } from './config.js';
 
@@ -314,6 +315,7 @@ export async function importarActualizacion(json, { reemplazarEjemplo = false } 
   await db.putVarios('destinos', dests);
   await usuarios.recibir(json.usuarios);
   await empleados.recibir(json.empleados);
+  await ingresos.depurar();
   await db.fijarAjuste('catalogoRecibido', json.fecha);
   if ((await db.ajuste('origenDatos')) === 'ejemplo' && reemplazarEjemplo) await db.fijarAjuste('origenDatos', 'oficina');
   await bodegas.asegurarActiva();

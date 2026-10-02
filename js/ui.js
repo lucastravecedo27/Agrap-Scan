@@ -259,6 +259,24 @@ export function sonidoError() {
 }
 
 // ---------- Archivos ----------
+/** Foto con la cámara trasera, reducida a «lado» px (JPEG). Resuelve el dataURL o null. */
+export async function tomarFoto(lado = 320, calidad = 0.75) {
+  const [f] = await new Promise((resolve) => {
+    const i = h('input', { type: 'file', accept: 'image/*', capture: 'environment', style: 'display:none' });
+    i.onchange = () => { resolve([...i.files]); i.remove(); };
+    document.body.append(i); i.click();
+  });
+  if (!f) return null;
+  const url = URL.createObjectURL(f);
+  try {
+    const img = await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = url; });
+    const esc = Math.min(1, lado / Math.max(img.width, img.height));
+    const c = h('canvas', { width: Math.round(img.width * esc), height: Math.round(img.height * esc) });
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    return c.toDataURL('image/jpeg', calidad);
+  } finally { URL.revokeObjectURL(url); }
+}
+
 // Android marca a veces los .json/.csv que llegan por WhatsApp con otro tipo y el selector
 // los deja en gris: se aceptan también esos tipos.
 export const TIPOS_JSON = '.json,application/json,application/octet-stream,text/plain';

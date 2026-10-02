@@ -7,7 +7,7 @@ import * as db from './db.js';
 import * as bodegas from './bodegas.js';
 import * as catalogo from './catalogo.js';
 import * as empleados from './empleados.js';
-import { qrProducto, qrDestino, qrEmpleado, CMD_CERRAR, CMD_DESHACER } from './config.js';
+import { qrProducto, qrDestino, qrCarne, formatoCarne, CMD_CERRAR, CMD_DESHACER } from './config.js';
 import { $, h, vaciar, num, aviso, confirmar } from './ui.js';
 
 const POR_PAGINA = 15;          // 3 columnas × 5 filas
@@ -51,18 +51,22 @@ function pagina(bodega, seccion, contenido) {
 }
 
 /** Construye las hojas del libro. opciones: {bodega, alcance:'todo'|'categoria'|'nuevos', categoria, destinos, comandos} */
-export async function construir({ bodega: cod, alcance = 'todo', categoria = null, destinos = true, comandos = true }) {
+export async function construir({ bodega: cod, alcance = 'todo', categoria = null, destinos = true, comandos = true, carnes = [] }) {
   const b = await bodegas.obtener(cod);
-  if (alcance === 'carnes') {
-    // Un carné por empleado activo de la bodega: se recorta por la línea y se plastifica.
-    const emps = (await empleados.deBodega(cod)).filter((e) => e.activo !== false);
-    const hojas = trocear(emps, POR_PAGINA).map((grupo, i, arr) => pagina(b, `Carnés de jornada${arr.length > 1 ? ` (${i + 1}/${arr.length})` : ''}`,
-      h('div.rejilla', grupo.map((e) => h('div.celda.celda-carne',
-        h('div.qr', { html: svgQR(qrEmpleado(e.codigo)) }),
-        h('div.celda-nombre', e.nombre),
-        h('div.celda-linea.fuerte', `Código ${e.codigo}`),
+  if (alcance === 'carnes' || alcance === 'carnes-blanco') {
+    // Carnés: se recortan por la línea y se plastifican. Con nombre (empleados activos con
+    // carné) o en blanco (números reservados que la finca asigna a personas nuevas).
+    const tarjetas = alcance === 'carnes'
+      ? (await empleados.deBodega(cod)).filter((e) => e.activo !== false && e.carne).map((e) => ({ n: e.carne, nombre: e.nombre, linea: `Código ${e.codigo} · carné ${formatoCarne(e.carne)}` }))
+      : carnes.map((n) => ({ n, nombre: 'Nombre: ____________________', linea: `Carné ${formatoCarne(n)} · sin asignar`, blanco: true }));
+    const titulo = alcance === 'carnes' ? 'Carnés de jornada' : 'Carnés en blanco';
+    const hojas = trocear(tarjetas, POR_PAGINA).map((grupo, i, arr) => pagina(b, `${titulo}${arr.length > 1 ? ` (${i + 1}/${arr.length})` : ''}`,
+      h('div.rejilla', grupo.map((t) => h(`div.celda.celda-carne${t.blanco ? '.carne-blanco' : ''}`,
+        h('div.qr', { html: svgQR(qrCarne(t.n)) }),
+        h('div.celda-nombre', t.nombre),
+        h('div.celda-linea.fuerte', t.linea),
         h('div.qr-texto', `${b.nombre} · carné de jornada`))))));
-    return { hojas, productos: [], bodega: b, empleados: emps.length };
+    return { hojas, productos: [], bodega: b, empleados: tarjetas.length };
   }
   let prods = await catalogo.productos(cod, { incluirInactivos: false });
   if (alcance === 'categoria') prods = prods.filter((p) => (p.categoria || 'Sin categoría') === categoria);
@@ -130,6 +134,7 @@ export async function construir({ bodega: cod, alcance = 'todo', categoria = nul
 let raiz = null;
 let ultimo = null;
 let preseleccion = null;
+let carnesBlanco = [];
 
 /** Abre la pantalla con bodega y alcance ya escogidos (desde «Productos nuevos»). */
 export function preseleccionar(op) { preseleccion = op; }
@@ -146,7 +151,8 @@ export async function alMostrar() {
     h('option', { value: 'todo' }, 'Todo el catálogo'),
     h('option', { value: 'categoria' }, 'Una categoría'),
     h('option', { value: 'nuevos' }, 'Solo productos nuevos desde la última impresión'),
-    h('option', { value: 'carnes' }, 'Carnés de empleados (jornada)'));
+    h('option', { value: 'carnes' }, 'Carnés de empleados (jornada)'),
+    h('option', { value: 'carnes-blanco', disabled: true }, 'Carnés en blanco (desde Oficina › Empleados)'));
   const selCat = h('select');
   const campoCat = h('label.campo', { hidden: true }, h('span', 'Categoría'), selCat);
   const chkDest = h('input', { type: 'checkbox', checked: true });
@@ -169,7 +175,7 @@ export async function alMostrar() {
   const generar = async () => {
     vaciar(vista).append(h('p.vacio', 'Generando…'));
     await new Promise((r) => setTimeout(r, 30));
-    ultimo = await construir({ bodega: selBod.value, alcance: selAlc.value, categoria: selCat.value, destinos: chkDest.checked, comandos: chkCmd.checked });
+    ultimo = await construir({ bodega: selBod.value, alcance: selAlc.value, categoria: selCat.value, destinos: chkDest.checked, comandos: chkCmd.checked, carnes: carnesBlanco });
     vaciar(vista).append(...ultimo.hojas);
     aviso(`${ultimo.hojas.length} página(s) · ${ultimo.empleados != null ? `${ultimo.empleados} carné(s)` : `${ultimo.productos.length} producto(s)`}`, 'ok');
     btnImp.disabled = !ultimo.hojas.length;
@@ -200,6 +206,7 @@ export async function alMostrar() {
   if (preseleccion) {
     if (preseleccion.bodega) selBod.value = preseleccion.bodega;
     if (preseleccion.alcance) selAlc.value = preseleccion.alcance;
+    carnesBlanco = preseleccion.carnes || [];
     if (['nuevos', 'carnes'].includes(preseleccion.alcance)) { chkDest.checked = false; chkCmd.checked = false; }
     preseleccion = null;
     await actualizar();

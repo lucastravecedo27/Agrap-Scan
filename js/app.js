@@ -147,7 +147,7 @@ async function iniciar() {
   } else {
     configuracion.montar($('[data-pantalla=catalogo]'), { alCambiarDatos: cambio, modo: 'oficina' });
     configuracion.alImprimirNuevos((bodega) => { libro.preseleccionar({ bodega, alcance: 'nuevos' }); irA('libro'); });
-    configuracion.alImprimirCarnes((bodega) => { libro.preseleccionar({ bodega, alcance: 'carnes' }); irA('libro'); });
+    configuracion.alImprimirCarnes((op) => { libro.preseleccionar(op); irA('libro'); });
     libro.montar($('[data-pantalla=libro]'));
   }
   $$('.pestana').forEach((b) => b.addEventListener('click', () => irA(b.dataset.ir)));

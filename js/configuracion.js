@@ -8,10 +8,12 @@ import * as personas from './personas.js';
 import * as labores from './labores.js';
 import * as usuarios from './usuarios.js';
 import * as empleados from './empleados.js';
+import * as ingresos from './ingresos.js';
+import { formatoCarne } from './config.js';
 import { VERSION, COLUMNAS_PRODUCTOS, COLUMNAS_DESTINOS } from './config.js';
 import {
   h, vaciar, num, aviso, confirmar, dialogo, formulario, informar, pedirPin,
-  elegirArchivo, descargar, hoy, compartirArchivo, TIPOS_JSON, TIPOS_CSV,
+  elegirArchivo, descargar, hoy, compartirArchivo, TIPOS_JSON, TIPOS_CSV, tomarFoto,
   desbloquearAudio, sonidoOk, sonidoGuardado, sonidoError, fijarSonido,
 } from './ui.js';
 
@@ -150,6 +152,7 @@ async function pintar() {
   raiz.append(seccionEnviar(lista));
   raiz.append(seccionBodegas(lista));
   raiz.append(await seccionUsuarios(lista));
+  raiz.append(await seccionIngresos(lista));
   raiz.append(await seccionEmpleados(lista));
   if (estado.bodega) raiz.append(await seccionCatalogo(lista));
   raiz.append(seccionPaquete(lista));
@@ -158,23 +161,6 @@ async function pintar() {
 
 // ---------- Productos nuevos ----------
 /** Foto tomada con la cámara, reducida a 320 px para que quepa en la base sin pesar. */
-async function tomarFoto() {
-  const [f] = await new Promise((resolve) => {
-    const i = h('input', { type: 'file', accept: 'image/*', capture: 'environment', style: 'display:none' });
-    i.onchange = () => { resolve([...i.files]); i.remove(); };
-    document.body.append(i); i.click();
-  });
-  if (!f) return null;
-  const url = URL.createObjectURL(f);
-  try {
-    const img = await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = url; });
-    const esc = Math.min(1, 320 / Math.max(img.width, img.height));
-    const c = h('canvas', { width: Math.round(img.width * esc), height: Math.round(img.height * esc) });
-    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-    return c.toDataURL('image/jpeg', 0.75);
-  } finally { URL.revokeObjectURL(url); }
-}
-
 async function seccionNuevos(lista) {
   const activas = lista.filter((b) => b.activa !== false);
   const actual = estado.bodega;
@@ -190,7 +176,7 @@ async function seccionNuevos(lista) {
   let foto = '';
   const vistaFoto = h('img.foto-nuevo', { hidden: true, alt: '' });
   const btnFoto = h('button.btn.secundario', { type: 'button', onclick: async () => {
-    const f = await tomarFoto(); if (!f) return;
+    const f = await tomarFoto(320); if (!f) return;
     foto = f; vistaFoto.src = f; vistaFoto.hidden = false; btnFoto.textContent = '📷 Cambiar foto';
   } }, '📷 Tomar foto (opcional)');
   const ultimoAgregado = h('p.nota');
@@ -305,9 +291,9 @@ async function seccionEmpleados(lista) {
   const pintarFilas = () => {
     estado.buscarEmp = buscar.value;
     const t = buscar.value.trim().toLowerCase();
-    const vis = todos.filter((e) => !t || e.nombre.toLowerCase().includes(t) || e.codigo.includes(t));
+    const vis = todos.filter((e) => !t || e.nombre.toLowerCase().includes(t) || e.codigo.includes(t) || (e.carne && formatoCarne(e.carne).includes(t)));
     vaciar(cuerpo).append(...vis.slice(0, 200).map((e) => h('tr', { class: e.activo === false ? 'inactivo' : '' },
-      h('td', h('strong', e.codigo)), h('td', e.nombre), h('td', e.fincas.join(', ')), h('td', e.activo === false ? 'Inactivo' : 'Activo'),
+      h('td', e.carne ? formatoCarne(e.carne) : '—'), h('td', h('strong', e.codigo)), h('td', e.nombre), h('td', e.fincas.join(', ')), h('td', e.activo === false ? 'Inactivo' : 'Activo'),
       h('td.acciones-celda', h('button.btn.mini', { type: 'button', onclick: async () => { await empleados.fijarActivo(e.codigo, e.activo === false); pintar(); } }, e.activo === false ? 'Activar' : 'Desactivar')))));
   };
   buscar.addEventListener('input', pintarFilas);
@@ -315,14 +301,70 @@ async function seccionEmpleados(lista) {
   const porFinca = lista.map((b) => `${b.codigo}: ${todos.filter((e) => e.activo !== false && e.fincas.includes(b.codigo)).length}`).join(' · ');
   return h('section.tarjeta',
     h('h2', 'Empleados · carnés de jornada'),
-    h('p.nota', 'Cada empleado tiene un carné con QR (código de nómina). Al empezar labores lo escanea, escoge la labor y la cantidad; al terminar lo escanea otra vez. Viajan en el catálogo: después de importar, envíe el catálogo a las fincas.'),
+    h('p.nota', 'Solo la oficina registra empleados. Cada uno tiene un carné con QR: al empezar labores lo escanea, escoge la labor y la cantidad; al terminar lo escanea otra vez. Las fincas guardan carnés en blanco para personas nuevas. Viajan en el catálogo: después de cambiar algo, envíe el catálogo.'),
     h('p', h('strong', `${todos.filter((e) => e.activo !== false).length} activos`), ` · ${porFinca}`),
     todos.length ? h('div', h('label.campo', buscar), h('div.tabla-scroll.corta', h('table.tabla',
-      h('thead', h('tr', h('th', 'Código'), h('th', 'Nombre'), h('th', 'Fincas'), h('th', 'Estado'), h('th', ''))), cuerpo))) : h('p.vacio', 'Todavía no hay empleados.'),
+      h('thead', h('tr', h('th', 'Carné'), h('th', 'Código'), h('th', 'Nombre'), h('th', 'Fincas'), h('th', 'Estado'), h('th', ''))), cuerpo))) : h('p.vacio', 'Todavía no hay empleados.'),
     h('div.fila-botones',
       h('button.btn.primario', { type: 'button', disabled: !lista.length, onclick: () => importarEmpleados(lista) }, '⇧ Importar CSV de empleados'),
       h('button.btn.secundario', { type: 'button', onclick: () => descargar('plantilla_empleados.csv', 'codigo,nombre,finca\r\n71529,Gonzalez Pushaina Rafael,B01\r\n') }, 'Plantilla CSV'),
-      h('button.btn.secundario', { type: 'button', disabled: !todos.length, onclick: () => irALibroCarnes(estado.bodega) }, '🖨 Imprimir carnés')));
+      h('button.btn.secundario', { type: 'button', disabled: !todos.length, onclick: () => irALibroCarnes({ bodega: estado.bodega, alcance: 'carnes' }) }, '🖨 Carnés con nombre'),
+      h('button.btn.secundario', { type: 'button', disabled: !lista.length, onclick: () => carnesEnBlanco(lista) }, '🖨 Carnés en blanco para fincas')));
+}
+
+async function carnesEnBlanco(lista) {
+  const v = await formulario('Carnés en blanco', [
+    { nombre: 'bodega', etiqueta: 'Para la finca', tipo: 'select', opciones: lista.map((b) => ({ valor: b.codigo, texto: `${b.codigo} · ${b.nombre}` })), valor: estado.bodega },
+    { nombre: 'cantidad', etiqueta: 'Cuántos (15 por hoja)', valor: '15', inputmode: 'numeric', requerido: true },
+  ], { aceptar: 'Generar', validar: (x) => (/^\d+$/.test(x.cantidad) && +x.cantidad > 0 && +x.cantidad <= 300 ? null : 'Entre 1 y 300.') });
+  if (!v) return;
+  const carnes = await empleados.reservarCarnes(Number(v.cantidad));
+  aviso(`Carnés ${formatoCarne(carnes[0])} a ${formatoCarne(carnes.at(-1))} reservados para ${v.bodega}`, 'ok', 5000);
+  irALibroCarnes({ bodega: v.bodega, alcance: 'carnes-blanco', carnes });
+}
+
+// ---------- Ingresos de personal que mandan las fincas ----------
+async function seccionIngresos(lista) {
+  const pend = await ingresos.recibidos();
+  const nombreFinca = (c) => lista.find((b) => b.codigo === c)?.nombre || c;
+  return h('section.tarjeta.tarjeta-nuevos',
+    h('h2', `Personas nuevas de las fincas${pend.length ? ` · ${pend.length} por registrar` : ''}`),
+    h('p.nota', 'La finca escanea un carné en blanco y manda fotos de la cédula y de la persona (archivo ingresos_….json por WhatsApp). Regístrela aquí con su código de nómina; queda con ese carné y llega a la finca con el catálogo.'),
+    pend.map((i) => {
+      const codigo = h('input', { name: 'codigo', inputmode: 'numeric', autocomplete: 'off', required: true });
+      const nombre = h('input', { name: 'nombre', autocomplete: 'off', autocapitalize: 'words', required: true });
+      const cedula = h('input', { name: 'cedula', inputmode: 'numeric', autocomplete: 'off' });
+      return h('div.ingreso-oficina',
+        h('div', h('small.sub', 'Cédula'), h('img.ingreso-foto-grande', { src: i.fotoCedula, alt: `Cédula carné ${i.carne}` })),
+        h('div', h('small.sub', 'Persona'), h('img.ingreso-foto-grande', { src: i.fotoPersona, alt: `Persona carné ${i.carne}` })),
+        h('form.formulario', {
+          onsubmit: async (e) => {
+            e.preventDefault();
+            try {
+              const emp = await ingresos.registrar(i.id, { codigo: codigo.value, nombre: nombre.value, cedula: cedula.value });
+              aviso(`${emp.nombre} registrado con el carné ${formatoCarne(emp.carne)}. Envíe el catálogo a ${i.bodega}.`, 'ok', 6000); pintar();
+            } catch (err) { aviso(err.message, 'error'); }
+          },
+        },
+        h('p', h('strong', `Carné ${formatoCarne(i.carne)}`), ` · ${i.bodega} ${nombreFinca(i.bodega)} · ${i.fecha}${i.registro ? ` · tomó ${i.registro}` : ''}`),
+        h('label.campo', h('span', 'Código de nómina (Agrosoft)'), codigo),
+        h('label.campo', h('span', 'Nombre completo'), nombre),
+        h('label.campo', h('span', 'Cédula'), cedula),
+        h('div.fila-botones',
+          h('button.btn.primario', { type: 'submit' }, 'Registrar'),
+          h('button.btn.secundario', { type: 'button', onclick: async () => { if (await confirmar('¿Descartar ingreso?', `Carné ${formatoCarne(i.carne)}: se borran las fotos. La finca puede volver a enviarlo.`, { si: 'Descartar', peligro: true })) { await ingresos.descartar(i.id); pintar(); } } }, 'Descartar'))));
+    }),
+    h('div.fila-botones', h('button.btn.primario', { type: 'button', onclick: recibirIngresos }, '⇩ Recibir ingresos de una finca')));
+}
+
+async function recibirIngresos() {
+  const [f] = await elegirArchivo({ aceptar: TIPOS_JSON });
+  if (!f) return;
+  try {
+    const r = await ingresos.recibir(JSON.parse(await f.text()));
+    informar('Ingresos recibidos', `${r.nuevos} persona(s) nueva(s) por registrar${r.total > r.nuevos ? ` (${r.total - r.nuevos} ya estaban o ya tienen carné)` : ''}.`);
+    pintar();
+  } catch (e) { informar('Archivo no válido', e.message); }
 }
 
 async function importarEmpleados(lista) {
@@ -336,7 +378,7 @@ async function importarEmpleados(lista) {
     r.errores.length ? h('p.dialogo-texto', `${r.errores.length} fila(s) con error no se importan: ${r.errores.slice(0, 5).map((e) => `fila ${e.fila}: ${e.motivo}`).join('; ')}${r.errores.length > 5 ? '…' : ''}`) : null), { si: 'Importar' });
   if (!ok || !r.validos.length) return;
   const res = await empleados.importar(r.validos);
-  informar('Empleados importados', `${res.importados} importado(s), ${res.inactivados} inactivado(s). Envíe el catálogo a las fincas e imprima los carnés.`);
+  informar('Empleados importados', `${res.importados} importado(s), ${res.inactivados} inactivado(s), ${res.carnes} carné(s) nuevo(s). Envíe el catálogo a las fincas e imprima los carnés.`);
   pintar();
 }
 

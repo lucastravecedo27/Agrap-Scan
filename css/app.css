@@ -373,3 +373,14 @@ small.sub { display: block; color: var(--gris); font-weight: 400; font-size: .85
 .dialogo-numero { max-width: 460px; }
 .dialogo-numero .cantidad-fila { margin: 6px 0 12px; }
 .celda-carne .celda-nombre { font-size: 9pt; max-height: none; }
+.lotes-rejilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 8px; margin: 8px 0; }
+.lote-boton { min-height: 64px; font-size: 1.5rem; font-weight: 700; border-radius: 14px; border: 2px solid var(--linea); background: var(--blanco); color: var(--azul-profundo); }
+.lote-boton[aria-pressed="true"] { background: var(--azul); border-color: var(--azul); color: #fff; }
+.ingreso-fotos { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.ingreso-fotos img, .ingreso-foto-grande { width: 100%; border-radius: 10px; border: 1px solid var(--linea); }
+.ingresos-lista { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+.ingreso { display: flex; align-items: center; gap: 10px; background: var(--blanco); border-radius: 12px; padding: 8px 12px 8px 8px; border: 1px solid var(--linea); }
+.ingreso img { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; }
+.ingreso-oficina { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(260px, 1.2fr); gap: 14px; align-items: start; padding: 12px 0; border-top: 1px solid var(--linea); }
+@media (max-width: 760px) { .ingreso-oficina { grid-template-columns: 1fr 1fr; } .ingreso-oficina form { grid-column: 1 / -1; } }
+.carne-blanco .celda-nombre { color: #999; font-weight: 400; }
