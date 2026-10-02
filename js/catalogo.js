@@ -5,6 +5,7 @@ import * as db from './db.js';
 import * as bodegas from './bodegas.js';
 import * as labores from './labores.js';
 import * as usuarios from './usuarios.js';
+import * as empleados from './empleados.js';
 import { aObjetos } from './csv.js';
 import { RE_BODEGA, MIN_LINEAS_HISTORIAL } from './config.js';
 
@@ -277,13 +278,14 @@ export async function exportarActualizacion(codigosBodega) {
     out.destinos.push(...(await db.porIndice('destinos', 'bodega', b.codigo)));
   }
   out.usuarios = await usuarios.paraBodegas(bods.map((b) => b.codigo));
+  out.empleados = await empleados.paraBodegas(bods.map((b) => b.codigo));
   return out;
 }
 
 export function validarActualizacion(json) {
   if (!json || json.app !== 'agrap-salidas' || json.tipo !== 'catalogo') throw new Error('El archivo no es un catálogo de Agrap Salidas (debe venir de la página de oficina).');
   for (const k of ['bodegas', 'productos', 'destinos']) if (!Array.isArray(json[k])) throw new Error(`Archivo incompleto: falta «${k}».`);
-  return { bodegas: json.bodegas.length, productos: json.productos.length, destinos: json.destinos.length, usuarios: json.usuarios?.length ?? 0, fecha: json.fecha };
+  return { bodegas: json.bodegas.length, productos: json.productos.length, destinos: json.destinos.length, usuarios: json.usuarios?.length ?? 0, empleados: json.empleados?.length ?? 0, fecha: json.fecha };
 }
 
 /** Aplica el catálogo de la oficina. Nunca toca despachos ni líneas de la finca. */
@@ -311,8 +313,9 @@ export async function importarActualizacion(json, { reemplazarEjemplo = false } 
   await db.putVarios('productos', prods);
   await db.putVarios('destinos', dests);
   await usuarios.recibir(json.usuarios);
+  await empleados.recibir(json.empleados);
   await db.fijarAjuste('catalogoRecibido', json.fecha);
   if ((await db.ajuste('origenDatos')) === 'ejemplo' && reemplazarEjemplo) await db.fijarAjuste('origenDatos', 'oficina');
   await bodegas.asegurarActiva();
-  return { bodegas: json.bodegas.length, productos: prods.length, destinos: dests.length, usuarios: json.usuarios?.length ?? 0 };
+  return { bodegas: json.bodegas.length, productos: prods.length, destinos: dests.length, usuarios: json.usuarios?.length ?? 0, empleados: json.empleados?.length ?? 0 };
 }

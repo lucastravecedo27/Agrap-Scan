@@ -16,6 +16,16 @@ HTML, CSS y JavaScript nativos, sin backend; funciona 100 % offline (IndexedDB +
 3. **Operaria**: escoge la finca, pone la página del destino bajo la cámara (si el destino es solo un lote, escoge **la labor**), luego la de cada producto, digita la cantidad y escoge **quién recibe**. Labores y nombres se aprenden: desde la 3.ª letra se sugieren y quedan bien escritos («CONTROL DE MALEZA AL DIA» → «Control de maleza»).
 4. **Fin del día**: Registros › Enviar CSV → revisión editable → menú de compartir (WhatsApp) o descarga.
 
+## Jornada (horas reales por persona)
+
+1. **Oficina › Empleados**: importa `codigo,nombre,finca` (código de nómina) e imprime los carnés (Libro › Carnés). Viajan en el catálogo; nunca van al repositorio.
+2. **Inicio**: el empleado escanea su carné (`EMP-71529`) → escoge la labor de nómina con 3 letras (161 labores con código y unidad de pago, `js/labores-nomina.js`) → cantidad planeada (horas, cajas, racimos, ha…).
+3. **Fin**: vuelve a escanear → confirma la cantidad real (si es por horas, la app propone las horas reales) → puede iniciar otra labor.
+4. **Jornada**: en labor ahora, terminadas hoy, sin cerrar de días anteriores y **Enviar CSV de jornadas**:
+   `fecha,finca,codigo_empleado,empleado,codigo_labor,labor,unidad,cantidad_plan,cantidad_real,hora_inicio,hora_fin,horas_reales,registro_inicio,registro_fin`
+
+Cada usuario tiene permisos: salidas, jornada o ambos.
+
 CSV de salida: `fecha,hora,bodega,despacho_id,finca,lote,labor,codigo_producto,producto,unidad,cantidad,responsable,recibe`
 (`salidas_AAAAMMDD_Bxx.csv` o `salidas_AAAAMMDD_todas.csv`).
 

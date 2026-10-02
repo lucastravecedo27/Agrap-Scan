@@ -334,6 +334,8 @@ details summary { cursor: pointer; font-weight: 600; color: var(--azul); min-hei
 .cabecera-oficina { cursor: default; }
 .cabecera-oficina span { font-size: 1.25rem; font-weight: 700; }
 .pestanas-3 { grid-template-columns: repeat(3, 1fr); }
+.pestanas-4 { grid-template-columns: repeat(4, 1fr); }
+.pestana[hidden] { display: none; }
 
 /* ---------- ¿Quién recibe? ---------- */
 .franja-recibe { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,.2); font-size: 1.15rem; font-weight: 700; }
@@ -356,3 +358,18 @@ details summary { cursor: pointer; font-weight: 600; color: var(--azul); min-hei
 /* En el iPhone el teclado tapa la mitad de abajo: el diálogo del nombre va arriba. */
 .capa:has(.dialogo-persona) { align-items: flex-start; padding-top: calc(10px + var(--seguro-arriba)); }
 .dialogo-persona .persona-sugerencias { max-height: 34vh; }
+
+/* ---------- Jornada ---------- */
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 10px; }
+.kpi { background: var(--blanco); border-radius: var(--radio); box-shadow: var(--sombra); padding: 14px 16px; border-left: 5px solid var(--azul); }
+.kpi-valor { font-size: 2.1rem; font-weight: 700; color: var(--azul-profundo); line-height: 1.1; font-variant-numeric: tabular-nums; }
+.kpi-rotulo { font-size: .9rem; color: var(--gris); }
+.kpi.kpi-alerta { border-left-color: #c0392b; background: #fdecea; }
+.kpi.kpi-alerta .kpi-valor { color: #a5281b; }
+.tarjeta-alerta { border: 2px solid #e2a19a; background: #fff7f6; }
+td.desvio { color: #a5281b; font-weight: 700; }
+small.sub { display: block; color: var(--gris); font-weight: 400; font-size: .85rem; }
+.tabla-jornada td { vertical-align: top; }
+.dialogo-numero { max-width: 460px; }
+.dialogo-numero .cantidad-fila { margin: 6px 0 12px; }
+.celda-carne .celda-nombre { font-size: 9pt; max-height: none; }

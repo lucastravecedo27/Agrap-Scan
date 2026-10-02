@@ -1,8 +1,8 @@
 // Usuarios que digitan en la finca. La oficina los crea, les asigna fincas y los manda en
 // el catálogo; en el teléfono cada usuario solo ve sus fincas. Sin usuarios creados la app
 // funciona abierta, como antes. La contraseña nunca se guarda: solo sal + SHA-256.
-//   ajustes.usuarios  [{usuario, nombre, sal, hash, fincas: ['B01'], activo}]
-//   ajustes.sesion    {usuario, nombre, fincas}
+//   ajustes.usuarios  [{usuario, nombre, sal, hash, fincas: ['B01'], permisos: {salidas, jornada}, activo}]
+//   ajustes.sesion    {usuario, nombre, fincas, permisos}
 
 import * as db from './db.js';
 
@@ -60,24 +60,25 @@ export const listar = async () => (await db.ajuste('usuarios', [])).sort((a, b) 
 export const hayUsuarios = async () => (await listar()).some((u) => u.activo !== false);
 
 /** -> mensaje de error o null. Se usa también en el formulario para no cerrarlo. */
-export async function validar({ usuario, nombre, clave = '', fincas = [] }, { nuevo = false } = {}) {
+export async function validar({ usuario, nombre, clave = '', fincas = [], permisos = { salidas: true, jornada: true } }, { nuevo = false } = {}) {
   const u = normalizarUsuario(usuario);
   if (!String(nombre || '').trim()) return 'Falta el nombre de la persona.';
   if (!/^[a-z0-9._-]{3,30}$/.test(u)) return 'El usuario debe tener de 3 a 30 letras o números, sin espacios ni tildes.';
   if (nuevo && (await db.ajuste('usuarios', [])).some((x) => x.usuario === u)) return `Ya existe el usuario «${u}».`;
   if ((nuevo || clave) && clave.length < 4) return 'La contraseña debe tener al menos 4 caracteres.';
   if (!fincas.length) return 'Marque al menos una finca.';
+  if (!permisos.salidas && !permisos.jornada) return 'Marque al menos un permiso: salidas o jornada.';
   return null;
 }
 
 /** Crea o actualiza. clave vacía al editar = se conserva la anterior. */
-export async function guardar({ usuario, nombre, clave = '', fincas = [], activo = true }, { nuevo = false } = {}) {
-  const error = await validar({ usuario, nombre, clave, fincas }, { nuevo });
+export async function guardar({ usuario, nombre, clave = '', fincas = [], permisos = { salidas: true, jornada: true }, activo = true }, { nuevo = false } = {}) {
+  const error = await validar({ usuario, nombre, clave, fincas, permisos }, { nuevo });
   if (error) throw new Error(error);
   const u = normalizarUsuario(usuario);
   const l = await db.ajuste('usuarios', []);
   const previo = l.find((x) => x.usuario === u);
-  const reg = { ...previo, usuario: u, nombre: String(nombre).trim(), fincas: [...new Set(fincas)].sort(), activo };
+  const reg = { ...previo, usuario: u, nombre: String(nombre).trim(), fincas: [...new Set(fincas)].sort(), permisos, activo };
   if (clave) { reg.sal = nuevaSal(); reg.hash = await cifrar(reg.sal, clave); }
   await db.fijarAjuste('usuarios', [...l.filter((x) => x.usuario !== u), reg]);
   return reg;
@@ -99,17 +100,26 @@ export async function recibir(lista) {
   const s = await sesion();
   if (!s) return;
   const u = lista.find((x) => x.usuario === s.usuario && x.activo !== false);
-  await db.fijarAjuste('sesion', u ? { usuario: u.usuario, nombre: u.nombre, fincas: u.fincas } : null);
+  await db.fijarAjuste('sesion', u ? sesionDe(u) : null);
 }
 
 // ---------- Sesión en el teléfono ----------
+const sesionDe = (u) => ({ usuario: u.usuario, nombre: u.nombre, fincas: u.fincas, permisos: u.permisos || { salidas: true, jornada: true } });
+
+/** ¿Puede este teléfono hacer 'salidas' o 'jornada'? Sin usuarios creados, todo. */
+export async function permite(tipo) {
+  if (!(await hayUsuarios())) return true;
+  const s = await sesion();
+  return !!s && (s.permisos?.[tipo] ?? true);
+}
+
 export const sesion = () => db.ajuste('sesion', null);
 
 /** -> sesión o lanza error con el motivo. */
 export async function ingresar(usuario, clave) {
   const u = (await db.ajuste('usuarios', [])).find((x) => x.usuario === normalizarUsuario(usuario));
   if (!u || u.activo === false || (await cifrar(u.sal, clave)) !== u.hash) throw new Error('Usuario o contraseña incorrectos.');
-  const s = { usuario: u.usuario, nombre: u.nombre, fincas: u.fincas };
+  const s = sesionDe(u);
   await db.fijarAjuste('sesion', s);
   return s;
 }

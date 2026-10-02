@@ -11,11 +11,12 @@ import * as exportar from './exportar.js';
 import * as libro from './libro.js';
 import * as configuracion from './configuracion.js';
 import * as usuarios from './usuarios.js';
+import * as jornada from './jornada.js';
 import { $, $$, h, vaciar, aviso, desbloquearAudio, fijarSonido } from './ui.js';
 
 const MODO = document.body.dataset.modo === 'oficina' ? 'oficina' : 'finca';
 const PANTALLAS = MODO === 'finca'
-  ? { escanear: escaneo, registros: exportar, ajustes: configuracion }
+  ? { escanear: escaneo, jornada, registros: exportar, ajustes: configuracion }
   : { catalogo: configuracion, libro };
 let actual = null;
 
@@ -34,6 +35,10 @@ async function refrescarCabecera() {
   if (MODO === 'oficina') return;
   const b = await bodegas.asegurarActiva();
   const s = await usuarios.sesion();
+  const [pSal, pJor] = [await usuarios.permite('salidas'), await usuarios.permite('jornada')];
+  $('.pestana[data-ir=jornada]').hidden = !pJor;
+  $('.pestana[data-ir=registros]').hidden = !pSal;
+  $('.pestanas').className = `pestanas pestanas-${2 + pSal + pJor}`;
   $('#bodegaActiva').textContent = b ? `${b.codigo} · ${b.nombre}` : 'Sin bodega';
   $('#bodegaFinca').textContent = [b ? (b.finca && b.finca !== b.nombre ? b.finca : 'Bodega activa · tocar para cambiar') : '', s?.nombre].filter(Boolean).join(' · ');
   const p = await exportar.resumenPendientes(b?.codigo || null);
@@ -134,6 +139,7 @@ async function iniciar() {
   if (MODO === 'finca') {
     escaneo.montar($('[data-pantalla=escanear]'), { alCambiarDatos: cambio });
     exportar.montar($('[data-pantalla=registros]'), { alCambiarDatos: cambio });
+    jornada.montar($('[data-pantalla=jornada]'), { alCambiarDatos: cambio });
     configuracion.montar($('[data-pantalla=ajustes]'), { alCambiarDatos: cambio, modo: 'finca' });
     $('#btnCambiarFinca').addEventListener('click', mostrarLobby);
     $('#lobbyAjustes').addEventListener('click', async () => { cerrarLobby(); await refrescarCabecera(); await irA('ajustes'); });
@@ -141,6 +147,7 @@ async function iniciar() {
   } else {
     configuracion.montar($('[data-pantalla=catalogo]'), { alCambiarDatos: cambio, modo: 'oficina' });
     configuracion.alImprimirNuevos((bodega) => { libro.preseleccionar({ bodega, alcance: 'nuevos' }); irA('libro'); });
+    configuracion.alImprimirCarnes((bodega) => { libro.preseleccionar({ bodega, alcance: 'carnes' }); irA('libro'); });
     libro.montar($('[data-pantalla=libro]'));
   }
   $$('.pestana').forEach((b) => b.addEventListener('click', () => irA(b.dataset.ir)));

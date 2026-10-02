@@ -7,6 +7,7 @@ import * as catalogo from './catalogo.js';
 import * as personas from './personas.js';
 import * as labores from './labores.js';
 import * as usuarios from './usuarios.js';
+import * as empleados from './empleados.js';
 import { VERSION, COLUMNAS_PRODUCTOS, COLUMNAS_DESTINOS } from './config.js';
 import {
   h, vaciar, num, aviso, confirmar, dialogo, formulario, informar, pedirPin,
@@ -95,11 +96,11 @@ async function recibirCatalogo() {
   let json, info;
   try { json = JSON.parse(await f.text()); info = catalogo.validarActualizacion(json); } catch (e) { informar('Archivo no válido', e.message); return; }
   const hayEjemplo = (await bodegas.listar()).some((b) => b.ejemplo);
-  const ok = await confirmar('Recibir catálogo', `Catálogo de la oficina del ${new Date(info.fecha).toLocaleString('es-CO')}: ${info.bodegas} bodega(s), ${info.productos} productos, ${info.destinos} destinos, ${info.usuarios} usuario(s). Los registros de salidas no se tocan.`, { si: 'Recibir' });
+  const ok = await confirmar('Recibir catálogo', `Catálogo de la oficina del ${new Date(info.fecha).toLocaleString('es-CO')}: ${info.bodegas} bodega(s), ${info.productos} productos, ${info.destinos} destinos, ${info.usuarios} usuario(s), ${info.empleados} empleado(s). Los registros de salidas no se tocan.`, { si: 'Recibir' });
   if (!ok) return;
   try {
     const r = await catalogo.importarActualizacion(json, { reemplazarEjemplo: hayEjemplo });
-    informar('Catálogo actualizado', `${r.bodegas} bodega(s), ${r.productos} productos, ${r.destinos} destinos y ${r.usuarios} usuario(s).`);
+    informar('Catálogo actualizado', `${r.bodegas} bodega(s), ${r.productos} productos, ${r.destinos} destinos, ${r.usuarios} usuario(s) y ${r.empleados} empleado(s).`);
     alCambio(); pintarFinca();
   } catch (e) { aviso(e.message, 'error'); }
 }
@@ -123,7 +124,7 @@ function seccionEnviar(lista) {
   };
   return h('section.tarjeta.tarjeta-nuevos',
     h('h2', 'Enviar catálogo a las fincas'),
-    h('p.nota', 'Genera un archivo con bodegas, productos, destinos y usuarios. Mándelo por WhatsApp al encargado: en el teléfono de la finca se carga en Ajustes › Recibir catálogo. Lo desactivado aquí queda desactivado allá.'),
+    h('p.nota', 'Genera un archivo con bodegas, productos, destinos, usuarios y empleados. Mándelo por WhatsApp al encargado: en el teléfono de la finca se carga en Ajustes › Recibir catálogo. Lo desactivado aquí queda desactivado allá.'),
     h('div.marcas-bodegas', lista.map((b, i) => h('label.campo.check', marcas[i], h('span', `${b.codigo} · ${b.nombre}`)))),
     h('div.fila-botones',
       h('button.btn.primario.btn-grande', { type: 'button', onclick: () => correr('compartir') }, 'Enviar (WhatsApp…)'),
@@ -149,6 +150,7 @@ async function pintar() {
   raiz.append(seccionEnviar(lista));
   raiz.append(seccionBodegas(lista));
   raiz.append(await seccionUsuarios(lista));
+  raiz.append(await seccionEmpleados(lista));
   if (estado.bodega) raiz.append(await seccionCatalogo(lista));
   raiz.append(seccionPaquete(lista));
   raiz.append(await seccionAjustes());
@@ -277,9 +279,10 @@ async function seccionUsuarios(lista) {
     h('h2', 'Usuarios que digitan'),
     h('p.nota', 'Cada usuario solo ve en el teléfono las fincas que tenga asignadas. Viajan en el catálogo: después de crear o cambiar un usuario, envíe el catálogo a esas fincas. Sin usuarios, el teléfono queda abierto como antes.'),
     us.length ? h('div.tabla-scroll', h('table.tabla',
-      h('thead', h('tr', h('th', 'Nombre'), h('th', 'Usuario'), h('th', 'Fincas'), h('th', 'Estado'), h('th', ''))),
+      h('thead', h('tr', h('th', 'Nombre'), h('th', 'Usuario'), h('th', 'Fincas'), h('th', 'Permisos'), h('th', 'Estado'), h('th', ''))),
       h('tbody', us.map((u) => h('tr', { class: u.activo === false ? 'inactivo' : '' },
         h('td', u.nombre), h('td', h('strong', u.usuario)), h('td', u.fincas.map((f) => `${f} · ${nombreFinca(f)}`).join(', ')),
+        h('td', [u.permisos?.salidas !== false ? 'Salidas' : '', u.permisos?.jornada !== false ? 'Jornada' : ''].filter(Boolean).join(' + ')),
         h('td', u.activo === false ? 'Desactivado' : 'Activo'),
         h('td.acciones-celda',
           h('button.btn.mini', { type: 'button', onclick: () => editarUsuario(u, lista) }, 'Editar'),
@@ -294,18 +297,67 @@ async function seccionUsuarios(lista) {
     h('div.fila-botones', h('button.btn.primario', { type: 'button', disabled: !lista.length, onclick: () => editarUsuario(null, lista) }, '+ Nuevo usuario')));
 }
 
+// ---------- Empleados (carnés de jornada) ----------
+async function seccionEmpleados(lista) {
+  const todos = await empleados.listar();
+  const buscar = h('input', { type: 'search', placeholder: 'Buscar por nombre o código…', value: estado.buscarEmp || '' });
+  const cuerpo = h('tbody');
+  const pintarFilas = () => {
+    estado.buscarEmp = buscar.value;
+    const t = buscar.value.trim().toLowerCase();
+    const vis = todos.filter((e) => !t || e.nombre.toLowerCase().includes(t) || e.codigo.includes(t));
+    vaciar(cuerpo).append(...vis.slice(0, 200).map((e) => h('tr', { class: e.activo === false ? 'inactivo' : '' },
+      h('td', h('strong', e.codigo)), h('td', e.nombre), h('td', e.fincas.join(', ')), h('td', e.activo === false ? 'Inactivo' : 'Activo'),
+      h('td.acciones-celda', h('button.btn.mini', { type: 'button', onclick: async () => { await empleados.fijarActivo(e.codigo, e.activo === false); pintar(); } }, e.activo === false ? 'Activar' : 'Desactivar')))));
+  };
+  buscar.addEventListener('input', pintarFilas);
+  pintarFilas();
+  const porFinca = lista.map((b) => `${b.codigo}: ${todos.filter((e) => e.activo !== false && e.fincas.includes(b.codigo)).length}`).join(' · ');
+  return h('section.tarjeta',
+    h('h2', 'Empleados · carnés de jornada'),
+    h('p.nota', 'Cada empleado tiene un carné con QR (código de nómina). Al empezar labores lo escanea, escoge la labor y la cantidad; al terminar lo escanea otra vez. Viajan en el catálogo: después de importar, envíe el catálogo a las fincas.'),
+    h('p', h('strong', `${todos.filter((e) => e.activo !== false).length} activos`), ` · ${porFinca}`),
+    todos.length ? h('div', h('label.campo', buscar), h('div.tabla-scroll.corta', h('table.tabla',
+      h('thead', h('tr', h('th', 'Código'), h('th', 'Nombre'), h('th', 'Fincas'), h('th', 'Estado'), h('th', ''))), cuerpo))) : h('p.vacio', 'Todavía no hay empleados.'),
+    h('div.fila-botones',
+      h('button.btn.primario', { type: 'button', disabled: !lista.length, onclick: () => importarEmpleados(lista) }, '⇧ Importar CSV de empleados'),
+      h('button.btn.secundario', { type: 'button', onclick: () => descargar('plantilla_empleados.csv', 'codigo,nombre,finca\r\n71529,Gonzalez Pushaina Rafael,B01\r\n') }, 'Plantilla CSV'),
+      h('button.btn.secundario', { type: 'button', disabled: !todos.length, onclick: () => irALibroCarnes(estado.bodega) }, '🖨 Imprimir carnés')));
+}
+
+async function importarEmpleados(lista) {
+  const [f] = await elegirArchivo({ aceptar: TIPOS_CSV });
+  if (!f) return;
+  const r = empleados.analizarCsv(await leerTexto(f), lista.map((b) => b.codigo));
+  if (r.faltan.length) { informar('Formato incorrecto', `Faltan columnas: ${r.faltan.join(', ')}. Columnas esperadas: codigo,nombre,finca`); return; }
+  const fincas = [...new Set(r.validos.flatMap((e) => e.fincas))].join(', ');
+  const ok = await confirmar('Importar empleados', h('div',
+    h('p.dialogo-texto', `${r.validos.length} empleado(s) para ${fincas || '—'}. Los de esas fincas que no vengan en el archivo quedan inactivos.`),
+    r.errores.length ? h('p.dialogo-texto', `${r.errores.length} fila(s) con error no se importan: ${r.errores.slice(0, 5).map((e) => `fila ${e.fila}: ${e.motivo}`).join('; ')}${r.errores.length > 5 ? '…' : ''}`) : null), { si: 'Importar' });
+  if (!ok || !r.validos.length) return;
+  const res = await empleados.importar(r.validos);
+  informar('Empleados importados', `${res.importados} importado(s), ${res.inactivados} inactivado(s). Envíe el catálogo a las fincas e imprima los carnés.`);
+  pintar();
+}
+
+let irALibroCarnes = () => {};
+export function alImprimirCarnes(fn) { irALibroCarnes = fn; }
+
 async function editarUsuario(u, lista) {
   const fincasDe = (x) => lista.filter((b) => x[`f_${b.codigo}`]).map((b) => b.codigo);
+  const permisosDe = (x) => ({ salidas: !!x.p_salidas, jornada: !!x.p_jornada });
   const v = await formulario(u ? `Editar ${u.usuario}` : 'Nuevo usuario', [
     { nombre: 'nombre', etiqueta: 'Nombre de la persona', valor: u?.nombre, requerido: true },
     { nombre: 'usuario', etiqueta: 'Usuario (sin espacios)', valor: u?.usuario, soloLectura: !!u, requerido: true },
     { nombre: 'clave', etiqueta: u ? 'Contraseña nueva (vacía = no cambia)' : 'Contraseña (mínimo 4)', tipo: 'password', requerido: !u },
     ...lista.map((b) => ({ nombre: `f_${b.codigo}`, etiqueta: `${b.codigo} · ${b.nombre}`, tipo: 'checkbox', valor: u ? u.fincas.includes(b.codigo) : lista.length === 1 })),
+    { nombre: 'p_salidas', etiqueta: 'Puede registrar salidas de bodega', tipo: 'checkbox', valor: u ? u.permisos?.salidas !== false : true },
+    { nombre: 'p_jornada', etiqueta: 'Puede registrar jornadas (carnés)', tipo: 'checkbox', valor: u ? u.permisos?.jornada !== false : true },
     { nombre: 'activo', etiqueta: 'Activo', tipo: 'checkbox', valor: u ? u.activo !== false : true },
-  ], { validar: (x) => usuarios.validar({ ...x, fincas: fincasDe(x) }, { nuevo: !u }) });
+  ], { validar: (x) => usuarios.validar({ ...x, fincas: fincasDe(x), permisos: permisosDe(x) }, { nuevo: !u }) });
   if (!v) return;
   try {
-    await usuarios.guardar({ ...v, fincas: fincasDe(v) }, { nuevo: !u });
+    await usuarios.guardar({ ...v, fincas: fincasDe(v), permisos: permisosDe(v) }, { nuevo: !u });
     aviso('Usuario guardado. Envíe el catálogo a sus fincas.', 'ok', 5000); pintar();
   } catch (e) { aviso(e.message, 'error'); }
 }

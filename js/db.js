@@ -8,10 +8,13 @@
 //   despachos  {id: 'B01-D-0001', bodega, numero, destino, finca, lote, labor, abierto, inicio, fin, fecha}
 //   lineas     {n (auto), despacho, bodega, fecha, hora, ts, codigo, producto, unidad,
 //               cantidad, finca, lote, labor, responsable, exportado (0/1), exportadoEn}
+//   jornadas   {n (auto), bodega, finca, fecha, empleado, nombre, codigoLabor, labor, unidad,
+//               plan, real, inicio, fin, horas, estado ('abierta'|'cerrada'), registro,
+//               cierre, exportado (0/1), exportadoEn}
 
 const NOMBRE = 'agrap-salidas';
-const VERSION_DB = 1;
-export const ALMACENES = ['ajustes', 'bodegas', 'productos', 'destinos', 'despachos', 'lineas'];
+const VERSION_DB = 2;
+export const ALMACENES = ['ajustes', 'bodegas', 'productos', 'destinos', 'despachos', 'lineas', 'jornadas'];
 
 let _db = null;
 
@@ -19,8 +22,13 @@ export function abrir() {
   if (_db) return Promise.resolve(_db);
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(NOMBRE, VERSION_DB);
-    req.onupgradeneeded = () => {
+    req.onupgradeneeded = (e) => {
       const db = req.result;
+      if (e.oldVersion < 2) {
+        const j = db.createObjectStore('jornadas', { keyPath: 'n', autoIncrement: true });
+        for (const i of ['bodega', 'fecha', 'empleado', 'estado', 'exportado']) j.createIndex(i, i);
+      }
+      if (e.oldVersion >= 1) return;
       db.createObjectStore('ajustes', { keyPath: 'clave' });
       db.createObjectStore('bodegas', { keyPath: 'codigo' });
       const p = db.createObjectStore('productos', { keyPath: 'id' });

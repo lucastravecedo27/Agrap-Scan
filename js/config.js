@@ -1,6 +1,6 @@
 // Configuración global de la app. Lo que cambia por versión o por regla de negocio vive aquí.
 
-export const VERSION = '1.5.0';
+export const VERSION = '1.6.0';
 
 export const PIN_POR_DEFECTO = '1234';
 
@@ -38,3 +38,13 @@ export const CMD_DESHACER = 'CMD-DESHACER';
 
 export const qrProducto = (bodega, codigo) => `${bodega}-INS-${codigo}`;
 export const qrDestino = (bodega, codigo) => `${bodega}-DST-${codigo}`;
+// Carné de empleado: el código de nómina, igual en todas las fincas.
+export const RE_EMP = /^EMP-(.+)$/i;
+export const qrEmpleado = (codigo) => `EMP-${codigo}`;
+
+export const COLUMNAS_JORNADAS = [
+  'fecha', 'finca', 'codigo_empleado', 'empleado', 'codigo_labor', 'labor', 'unidad',
+  'cantidad_plan', 'cantidad_real', 'hora_inicio', 'hora_fin', 'horas_reales', 'registro_inicio', 'registro_fin',
+];
+// Jornada: alerta si la cantidad real se aleja más de esta fracción de la planeada.
+export const DESVIO_JORNADA = 0.25;

@@ -37,9 +37,11 @@ export function filtrar(lista, texto) {
 /**
  * Crea una lista aprendida. prefijo: clave en ajustes; formatearFn: cómo se escribe un
  * nombre nuevo; base: nombres que salen aunque no se hayan usado; textos: rótulos;
- * enterPrimera: Enter toma la primera sugerencia (para listas cerradas como las labores).
+ * enterPrimera: Enter toma la primera sugerencia (para listas cerradas como las labores);
+ * cerrada: solo se escoge de la base, no se crean nombres nuevos; detalle(nombre): texto
+ * corto a la derecha de cada opción.
  */
-export function crearLista({ prefijo, formatear: formatearFn = formatear, base = [], textos, enterPrimera = false }) {
+export function crearLista({ prefijo, formatear: formatearFn = formatear, base = [], textos, enterPrimera = false, cerrada = false, detalle = null }) {
   const clave = (bodega) => `${prefijo}:${bodega}`;
   const canonico = new Map(base.map((n) => [normalizar(n), n]));
   // Lo que coincide con la base (sin importar tildes ni mayúsculas) queda con la ortografía de la base.
@@ -87,6 +89,7 @@ export function crearLista({ prefijo, formatear: formatearFn = formatear, base =
 
     const confirmar = async (nombre) => {
       if (!escribir(nombre)) { aviso(textos.vacio, 'error'); input.focus(); return; }
+      if (cerrada && !canonico.has(normalizar(escribir(nombre)))) { aviso(textos.sinCoincidencias, 'error'); input.focus(); return; }
       cerrar(await registrar(bodega, nombre));
     };
     const pintar = () => {
@@ -105,9 +108,9 @@ export function crearLista({ prefijo, formatear: formatearFn = formatear, base =
       for (const p of encontrados) {
         if (sugerida && !texto && p.nombre === sugerida) continue;
         sugerencias.append(h('button.persona-opcion', { type: 'button', role: 'option', onclick: () => confirmar(p.nombre) },
-          h('span', p.nombre), h('small', p.usos ? `${p.usos} ${p.usos === 1 ? textos.uso : textos.usos}` : '')));
+          h('span', p.nombre), h('small', detalle ? detalle(p.nombre) : p.usos ? `${p.usos} ${p.usos === 1 ? textos.uso : textos.usos}` : '')));
       }
-      if (normalizar(texto).length >= MIN_LETRAS && nuevo && !exacto) {
+      if (!cerrada && normalizar(texto).length >= MIN_LETRAS && nuevo && !exacto) {
         sugerencias.append(h('button.persona-opcion.persona-nueva', { type: 'button', onclick: () => confirmar(nuevo) },
           h('span', `+ ${textos.nuevo}: ${nuevo}`), h('small', 'se guarda para la próxima')));
       }

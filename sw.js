@@ -1,13 +1,13 @@
 // Service worker: todo en caché para uso 100 % offline.
 // Al publicar cambios, subir VERSION (igual que js/config.js): el navegador detecta que
 // este archivo cambió, instala la caché nueva, toma el control y la app se recarga sola.
-const VERSION = '1.5.0';
+const VERSION = '1.6.0';
 const CACHE = `agrap-salidas-${VERSION}`;
 const ARCHIVOS = [
   './', './index.html', './oficina.html', './instalar.html', './manifest.json',
   './css/app.css', './css/impresion.css',
   './js/app.js', './js/config.js', './js/db.js', './js/csv.js', './js/ui.js', './js/bodegas.js',
-  './js/catalogo.js', './js/personas.js', './js/labores.js', './js/usuarios.js', './js/despacho.js', './js/escaneo.js', './js/scanner.js', './js/scanner-worker.js',
+  './js/catalogo.js', './js/personas.js', './js/labores.js', './js/usuarios.js', './js/empleados.js', './js/jornada.js', './js/labores-nomina.js', './js/despacho.js', './js/escaneo.js', './js/scanner.js', './js/scanner-worker.js',
   './js/exportar.js', './js/libro.js', './js/configuracion.js',
   './lib/jsQR.js', './lib/qrcode.js',
   './fuentes/outfit-400.woff2', './fuentes/outfit-600.woff2', './fuentes/outfit-700.woff2',

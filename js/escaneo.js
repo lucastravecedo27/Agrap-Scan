@@ -5,6 +5,9 @@ import * as despacho from './despacho.js';
 import * as bodegas from './bodegas.js';
 import * as personas from './personas.js';
 import * as labores from './labores.js';
+import * as jornada from './jornada.js';
+import * as usuarios from './usuarios.js';
+import { RE_EMP } from './config.js';
 import * as db from './db.js';
 import { Escaner, mantenerPantalla } from './scanner.js';
 import {
@@ -116,7 +119,7 @@ export async function refrescar() {
     );
   } else {
     franja.classList.remove('con-despacho');
-    franja.append(h('div.franja-vacia', '① Escanee un DESTINO para abrir un despacho'));
+    franja.append(h('div.franja-vacia', '① Escanee un DESTINO para abrir un despacho, o un CARNÉ para la jornada'));
   }
   const lineas = d ? await despacho.lineasDe(d.id) : [];
   const ultima = lineas[lineas.length - 1];
@@ -147,6 +150,16 @@ export async function procesar(texto) {
   try {
     const bod = await bodegas.bodegaActiva();
     if (!bod) { error('No hay bodega activa.'); return; }
+    // Carné de empleado: jornada (inicio o fin de labor).
+    const carne = String(texto || '').trim().match(RE_EMP);
+    if (carne) {
+      if (!(await usuarios.permite('jornada'))) { error('Su usuario no registra jornadas.'); return; }
+      sonidoOk();
+      const m = await jornada.alEscanearCarne(carne[1].trim(), bod);
+      if (m.tipo === 'error') error(m.texto); else mostrarMensaje(m.texto, m.tipo);
+      return;
+    }
+    if (!(await usuarios.permite('salidas'))) { error('Su usuario solo registra jornadas: escanee carnés.'); return; }
     const r = await despacho.interpretar(texto, bod);
     switch (r.tipo) {
       case 'error': error(r.mensaje); break;
