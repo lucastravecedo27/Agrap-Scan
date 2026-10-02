@@ -10,6 +10,7 @@ import * as usuarios from './usuarios.js';
 import * as empleados from './empleados.js';
 import * as ingresos from './ingresos.js';
 import * as traspaso from './traspaso.js';
+import * as correo from './correo.js';
 import { formatoCarne } from './config.js';
 import { VERSION, COLUMNAS_PRODUCTOS, COLUMNAS_DESTINOS } from './config.js';
 import {
@@ -66,6 +67,7 @@ async function pintarFinca() {
     h('h2', 'Salidas'),
     h('label.campo.check', chkDestino, h('span', 'Pedir el DESTINO (lote) antes de los productos')),
     h('p.nota', 'Apagado: al escanear un producto el despacho se abre solo, con destino la finca escogida (lote GENERAL).')));
+  raiz.append(await seccionCorreo(false));
   raiz.append(await seccionAprendidos(personas, 'Personas que reciben', 'Nombre', 'Entregas', 'Todavía no hay nombres.'));
   raiz.append(await seccionAprendidos(labores, 'Labores', 'Labor', 'Despachos', 'Todavía no se ha escrito ninguna labor nueva.'));
   const sonido = await db.ajuste('sonido', true);
@@ -158,6 +160,7 @@ async function pintar() {
 
   raiz.append(await seccionNuevos(lista));
   raiz.append(seccionEnviar(lista));
+  raiz.append(await seccionCorreo(true));
   raiz.append(seccionBodegas(lista));
   raiz.append(await seccionUsuarios(lista));
   raiz.append(await seccionIngresos(lista));
@@ -247,6 +250,34 @@ async function seccionNuevos(lista) {
 
 let irALibroNuevos = () => {};
 export function alImprimirNuevos(fn) { irALibroNuevos = fn; }
+
+// ---------- Correo ----------
+async function seccionCorreo(oficina) {
+  const c = (await correo.config()) || { url: '', clave: '', hora: '17:00' };
+  const url = h('input', { type: 'url', value: c.url, placeholder: 'https://script.google.com/macros/s/…/exec', autocomplete: 'off' });
+  const clave = h('input', { type: 'password', value: c.clave, placeholder: 'Clave del servicio (mín. 12)', autocomplete: 'new-password' });
+  const hora = h('input', { type: 'time', value: c.hora || '17:00' });
+  const bit = (await correo.leerBitacora()).slice(0, 8);
+  const cola = await correo.leerCola();
+  return h('section.tarjeta',
+    h('h2', '📧 Correo del cierre'),
+    h('p.nota', oficina
+      ? 'Servicio de Google Apps Script con la cuenta de la empresa (instrucciones en herramientas/correo). Los destinatarios se ponen en el servicio, no aquí. Al enviar el catálogo, la configuración llega a los teléfonos.'
+      : 'El cierre del día sale por correo solo con el PIN del encargado. La configuración la manda la oficina en el catálogo.'),
+    h('div.fila-campos', h('label.campo', h('span', 'URL del servicio'), url)),
+    h('div.fila-campos', h('label.campo', h('span', 'Clave'), clave), h('label.campo', h('span', 'Hora de cierre (aviso)'), hora)),
+    h('div.fila-botones',
+      h('button.btn.primario', { type: 'button', onclick: async () => {
+        try { await correo.guardarConfig({ url: url.value, clave: clave.value, hora: hora.value }); aviso('Correo guardado', 'ok'); } catch (e) { aviso(e.message, 'error', 6000); }
+      } }, 'Guardar'),
+      h('button.btn.secundario', { type: 'button', onclick: async () => {
+        try { await correo.guardarConfig({ url: url.value, clave: clave.value, hora: hora.value }); const r = await correo.probar(); informar('Correo de prueba enviado', `Llegó al servicio y salió a ${r.destinatarios} destinatario(s). Revise la bandeja de entrada.`); } catch (e) { informar('No se pudo enviar', e.message); }
+      } }, 'Mandar correo de prueba')),
+    cola.length ? h('p.correo-cola', `⏳ ${cola.length} cierre(s) autorizados en cola (se mandan solos con señal).`) : null,
+    bit.length ? h('div', h('h3', 'Últimos envíos'), h('div.tabla-scroll.corta', h('table.tabla',
+      h('thead', h('tr', h('th', 'Fecha'), h('th', 'Cierre'), h('th', 'Autorizó'), h('th', 'Estado'))),
+      h('tbody', bit.map((r) => h('tr', h('td', new Date(r.ts).toLocaleString('es-CO')), h('td', `${r.bodega} · ${r.rango}`), h('td', r.autorizadoPor), h('td', r.ok ? `✓ ${r.destinatarios} correo(s)` : `✗ ${r.error}`))))))) : null);
+}
 
 // ---------- Bodegas ----------
 function seccionBodegas(lista) {

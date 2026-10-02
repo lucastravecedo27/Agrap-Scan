@@ -11,6 +11,7 @@ import * as usuarios from './usuarios.js';
 import * as bodegas from './bodegas.js';
 import * as catalogo from './catalogo.js';
 import * as rdt from './rdt.js';
+import * as correo from './correo.js';
 import { crearLista } from './personas.js';
 import { LABORES_NOMINA } from './labores-nomina.js';
 import { DESVIO_JORNADA, formatoCarne } from './config.js';
@@ -274,6 +275,8 @@ export async function alMostrar() {
   const bod = await bodegas.bodegaActiva();
   vaciar(raiz);
   if (!bod) { raiz.append(h('p.vacio', 'No hay finca activa.')); return; }
+  const tCorreo = await correo.tarjeta(bod, () => { alCambio(); alMostrar(); });
+  if (tCorreo) raiz.append(tCorreo);
   const todas = await deBodega(bod);
   const h0 = hoy(); const ahora = new Date().toISOString();
   const abiertas = todas.filter((j) => j.estado === 'abierta' && j.fecha === h0);

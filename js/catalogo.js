@@ -302,6 +302,8 @@ export async function exportarActualizacion(codigosBodega) {
   }
   out.usuarios = await usuarios.paraBodegas(bods.map((b) => b.codigo));
   out.empleados = await empleados.paraBodegas(bods.map((b) => b.codigo));
+  const c = await db.ajuste('correo', null);
+  if (c?.url) out.correo = c;
   return out;
 }
 
@@ -337,6 +339,7 @@ export async function importarActualizacion(json, { reemplazarEjemplo = false } 
   await db.putVarios('destinos', dests);
   await usuarios.recibir(json.usuarios);
   await empleados.recibir(json.empleados);
+  if (json.correo?.url) await db.fijarAjuste('correo', json.correo);
   await ingresos.depurar();
   await db.fijarAjuste('catalogoRecibido', json.fecha);
   if ((await db.ajuste('origenDatos')) === 'ejemplo' && reemplazarEjemplo) await db.fijarAjuste('origenDatos', 'oficina');

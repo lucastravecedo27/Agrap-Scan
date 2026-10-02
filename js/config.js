@@ -1,6 +1,6 @@
 // Configuración global de la app. Lo que cambia por versión o por regla de negocio vive aquí.
 
-export const VERSION = '2.3.0';
+export const VERSION = '2.4.0';
 
 export const PIN_POR_DEFECTO = '1234';
 

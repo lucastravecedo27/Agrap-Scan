@@ -13,6 +13,7 @@ import * as configuracion from './configuracion.js';
 import * as usuarios from './usuarios.js';
 import * as jornada from './jornada.js';
 import * as modo from './modo.js';
+import * as correo from './correo.js';
 import { $, $$, h, vaciar, aviso, confirmar, desbloquearAudio, fijarSonido } from './ui.js';
 
 const MODO = document.body.dataset.modo === 'oficina' ? 'oficina' : 'finca';
@@ -50,8 +51,11 @@ async function refrescarCabecera() {
   ind.textContent = `${p.total} sin exportar`;
   ind.classList.toggle('alerta-dias', p.antiguas > 0);
   const banda = $('#bandaPendientes');
-  banda.hidden = !p.antiguas;
-  banda.textContent = p.antiguas ? `⚠ Hay ${p.antiguas} línea(s) sin exportar de días anteriores (${p.dias.join(', ')}). Vaya a Registros › Enviar CSV.` : '';
+  const listo = b ? await correo.listoParaAutorizar(b.codigo) : null;
+  banda.hidden = !p.antiguas && !listo;
+  banda.textContent = listo
+    ? `📧 Cierre del día listo para autorizar (${listo.total} registro(s)). Vaya a ${m === 'personal' ? 'Jornada' : 'Registros'} › Revisar y autorizar envío.`
+    : p.antiguas ? `⚠ Hay ${p.antiguas} línea(s) sin exportar de días anteriores (${p.dias.join(', ')}). Vaya a Registros › Enviar CSV.` : '';
 }
 
 // ---------- Lobby (finca) ----------
@@ -231,7 +235,7 @@ async function iniciar() {
   // Para pruebas desde la consola: agrap.simular('B01-INS-0045')
   window.agrap = { simular: escaneo.simular, irA, db, VERSION, MODO };
   registrarSW();
-  if (MODO === 'finca') { guardarAtras(); ofrecerInstalacion(); seguirCabecera(); }
+  if (MODO === 'finca') { guardarAtras(); ofrecerInstalacion(); seguirCabecera(); correo.vigilar(); setInterval(refrescarCabecera, 120000); }
   await refrescarCabecera();
   if (MODO === 'finca') await mostrarLobby(); else await irA('catalogo');
 }

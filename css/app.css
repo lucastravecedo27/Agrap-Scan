@@ -492,3 +492,9 @@ html, body { overflow-x: clip; }
 .dialogo-persona:has(.persona-camara) .persona-sugerencias { max-height: 22vh; }
 
 .lobby-respaldo { grid-column: 1 / -1; color: var(--amarillo); font-size: .95rem; margin: 6px 2px 0; }
+
+/* Correo del cierre */
+.tarjeta-correo { border: 3px solid var(--azul); }
+.correo-cola { color: #7a5600; font-weight: 600; }
+.dialogo-correo { max-width: 760px; }
+.correo-previa { border: 1px solid var(--linea); border-radius: 10px; max-height: 50vh; overflow: auto; margin-top: 8px; }

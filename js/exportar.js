@@ -5,6 +5,7 @@ import * as db from './db.js';
 import * as bodegas from './bodegas.js';
 import * as despacho from './despacho.js';
 import { serializar } from './csv.js';
+import * as correo from './correo.js';
 import { COLUMNAS_EXPORTE, DIAS_RETENCION } from './config.js';
 import {
   $, h, vaciar, num, hoy, fechaLocal, fechaLarga, aviso, confirmar, dialogo,
@@ -55,6 +56,13 @@ export async function generar({ alcance, modo = 'pendientes', desde = null, hast
   const contenido = serializar(COLUMNAS_EXPORTE, lineas.map((l) => aFila(l, bods)));
   const nombre = `salidas_${hoy().replace(/-/g, '')}_${alcance === 'todas' ? 'todas' : alcance}.csv`;
   return { nombre, contenido, lineas };
+}
+
+/** CSV de unas líneas cualquiera (lo usa el correo del cierre). */
+export async function csvDe(lineas) {
+  const bods = Object.fromEntries((await bodegas.listar()).map((b) => [b.codigo, b]));
+  const orden = [...lineas].sort((a, b) => a.ts.localeCompare(b.ts) || a.n - b.n);
+  return serializar(COLUMNAS_EXPORTE, orden.map((l) => aFila(l, bods)));
 }
 
 export async function marcarExportadas(lineas) {
@@ -212,6 +220,8 @@ async function pintar() {
   const lista = await bodegas.listar();
   const pend = await resumenPendientes(estado.alcance === 'todas' ? null : estado.alcance);
   vaciar(raiz);
+  const tCorreo = activa ? await correo.tarjeta(activa, () => { alCambio(); pintar(); }) : null;
+  if (tCorreo) raiz.append(tCorreo);
 
   // --- Exportar ---
   const desde = h('input', { type: 'date', value: estado.fecha });
