@@ -229,13 +229,17 @@ export async function guardarPaquete(resumen, { reemplazarEjemplo = false } = {}
 }
 
 /**
- * La primera vez que se abre la app: carga ./datos-iniciales si existe (servido en
- * local con los datos reales) y si no, ./ejemplo (lo único que va en el repositorio).
+ * La primera vez que se abre la app: carga ./datos-iniciales (catálogo real publicado)
+ * y si no está, ./ejemplo. Un equipo que solo tiene el ejemplo, sin salidas registradas,
+ * lo cambia por los datos reales en cuanto aparecen.
  */
 export async function precargarSiHaceFalta() {
-  if (await db.ajuste('inicializado', false)) return null;
-  if ((await db.contar('bodegas')) > 0) { await db.fijarAjuste('inicializado', true); return null; }
-  for (const [carpeta, ejemplo] of [['datos-iniciales', false], ['ejemplo', true]]) {
+  // Con salidas ya registradas no se reemplaza solo: se borrarían. Ahí se carga a mano.
+  const soloEjemplo = (await db.ajuste('origenDatos')) === 'ejemplo' && (await bodegas.listar()).every((b) => b.ejemplo)
+    && (await db.contar('lineas')) === 0;
+  if ((await db.ajuste('inicializado', false)) && !soloEjemplo) return null;
+  if ((await db.contar('bodegas')) > 0 && !soloEjemplo) { await db.fijarAjuste('inicializado', true); return null; }
+  for (const [carpeta, ejemplo] of [['datos-iniciales', false], ...(soloEjemplo ? [] : [['ejemplo', true]])]) {
     try {
       const leer = async (n) => {
         const r = await fetch(`${carpeta}/${n}`, { cache: 'no-store' });
@@ -247,7 +251,7 @@ export async function precargarSiHaceFalta() {
       const [bodegasCsv, productosCsv, destinosCsv] = await Promise.all(['bodegas.csv', 'productos.csv', 'destinos.csv'].map(leer));
       const resumen = await analizarPaquete({ bodegasCsv, productosCsv, destinosCsv });
       if (!resumen.bodegas.length) continue;
-      const r = await guardarPaquete(resumen);
+      const r = await guardarPaquete(resumen, { reemplazarEjemplo: soloEjemplo });
       if (ejemplo) for (const b of resumen.bodegas) { const x = await bodegas.obtener(b.codigo); x.ejemplo = true; await db.put('bodegas', x); }
       await db.fijarAjuste('origenDatos', ejemplo ? 'ejemplo' : 'iniciales');
       await db.fijarAjuste('inicializado', true);

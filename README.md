@@ -32,8 +32,9 @@ python3 -m http.server 8765      # y abrir http://127.0.0.1:8765/
 En `localhost` el service worker usa la red primero. Al publicar cambios, subir `VERSION`
 en `js/config.js` **y** en `sw.js`: los teléfonos se actualizan solos.
 
-`herramientas/generar_datos_iniciales.py` arma `datos-iniciales/` desde `Materiales/`
-(ambas carpetas están en `.gitignore`: no se suben datos reales). En el repositorio solo va
-el catálogo de `ejemplo/`.
+`datos-iniciales/` trae el catálogo real publicado (hoy: B01 Don Gaspar, 547 productos y
+17 destinos). Un equipo nuevo o que solo tenga el `ejemplo/` lo carga solo al abrir la app.
+Usuarios y contraseñas nunca van aquí: viajan en el catálogo que manda la oficina.
+`Materiales/` sigue fuera del repositorio.
 
 Librerías locales: `lib/jsQR.js` (Apache-2.0) y `lib/qrcode.js` (qrcode-generator, MIT).
