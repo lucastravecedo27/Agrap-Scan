@@ -10,6 +10,10 @@ import * as usuarios from './usuarios.js';
 import { RE_CARNE } from './config.js';
 import * as modo from './modo.js';
 import * as db from './db.js';
+import * as traspaso from './traspaso.js';
+import * as empleados from './empleados.js';
+import * as ingresos from './ingresos.js';
+import * as catalogo from './catalogo.js';
 import { Escaner, mantenerPantalla } from './scanner.js';
 import {
   $, h, vaciar, num, aviso, confirmar, dialogo, tecladoNumerico,
@@ -129,7 +133,7 @@ export async function refrescar() {
     );
   } else {
     franja.classList.remove('con-despacho');
-    franja.append(h('div.franja-vacia', '① Escanee un DESTINO para abrir un despacho'));
+    franja.append(h('div.franja-vacia', (await db.ajuste('pedirDestino', false)) ? '① Escanee un DESTINO para abrir un despacho' : '📦 Escanee un PRODUCTO para registrar su salida'));
   }
   const lineas = d ? await despacho.lineasDe(d.id) : [];
   const ultima = lineas[lineas.length - 1];
@@ -160,6 +164,8 @@ export async function procesar(texto) {
   try {
     const bod = await bodegas.bodegaActiva();
     if (!bod) { error('No hay bodega activa.'); return; }
+    // QR de la pantalla de la oficina (empleados): vale en cualquier modo.
+    if (traspaso.esTraspaso(texto)) { await recibirTraspaso(texto, bod); return; }
     // Carné de empleado: jornada (inicio o fin de labor).
     const carne = String(texto || '').trim().match(RE_CARNE);
     const m = await modo.actual();
@@ -219,8 +225,11 @@ export async function procesar(texto) {
         break;
       }
       case 'producto': {
-        const d = await despacho.abierto(bod);
-        if (!d) { error('Primero escanee un DESTINO.'); break; }
+        let d = await despacho.abierto(bod);
+        if (!d) {
+          if (await db.ajuste('pedirDestino', false)) { error('Primero escanee un DESTINO.'); break; }
+          d = (await despacho.abrir(bod, await destinoGeneral(bod))).despacho;
+        }
         sonidoOk();
         await pedirCantidad(d, r.registro);
         break;
@@ -235,6 +244,35 @@ export async function procesar(texto) {
     await refrescar();
     alCambio();
   }
+}
+
+/**
+ * Sin paso de destino: el despacho se abre solo con el lote GENERAL de la finca (el del
+ * catálogo si existe; si no, uno fijo).
+ */
+async function destinoGeneral(bod) {
+  const b = await bodegas.obtener(bod);
+  const ds = await catalogo.destinos(bod, { incluirInactivos: false });
+  const finca = b?.finca || b?.nombre || bod;
+  const gen = ds.find((x) => /^GENERAL$/i.test(x.lote) && x.finca === finca);
+  return { codigo: gen?.codigo || 'GEN', finca, lote: 'GENERAL', labor: 'General' };
+}
+
+/** Partes del QR de empleados que muestra la oficina; al juntarlas todas, se cargan. */
+async function recibirTraspaso(texto, bod) {
+  const r = traspaso.recibir(texto);
+  if (!r.completo) { sonidoOk(); mostrarMensaje(`📲 Recibiendo de la oficina: ${r.recibidas} de ${r.total}. Siga apuntando a la pantalla.`, 'aviso'); return; }
+  const d = r.datos;
+  if (d?.tipo !== 'empleados' || !Array.isArray(d.empleados)) { error('Ese código de la oficina no es una lista de empleados.'); return; }
+  sonidoOk();
+  const lista = d.empleados.map((e) => ({ codigo: String(e.c), nombre: e.n, carne: e.k, fincas: e.f, activo: e.a !== 0, cedula: '' }));
+  const ok = await confirmar('Empleados de la oficina', `${lista.length} empleado(s) de ${d.bodegas.join(', ')}. Desde ahora el teléfono reconoce sus carnés.`, { si: 'Cargar' });
+  if (!ok) { mostrarMensaje('No se cargaron los empleados.', ''); return; }
+  await empleados.recibirDeBodegas(lista, d.bodegas);
+  await ingresos.depurar();
+  sonidoGuardado();
+  mostrarMensaje(`✓ ${lista.length} empleado(s) cargados. Ya se pueden escanear los carnés.`, 'ok');
+  void bod;
 }
 
 function error(msg) {

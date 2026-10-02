@@ -9,6 +9,7 @@ import * as labores from './labores.js';
 import * as usuarios from './usuarios.js';
 import * as empleados from './empleados.js';
 import * as ingresos from './ingresos.js';
+import * as traspaso from './traspaso.js';
 import { formatoCarne } from './config.js';
 import { VERSION, COLUMNAS_PRODUCTOS, COLUMNAS_DESTINOS } from './config.js';
 import {
@@ -58,6 +59,11 @@ async function pintarFinca() {
     h('p', recibido ? `Último catálogo recibido: ${new Date(recibido).toLocaleString('es-CO')}` : 'Todavía no se ha recibido catálogo de la oficina.'),
     h('ul.resumen', resumen),
     h('button.btn.primario.btn-grande', { type: 'button', onclick: recibirCatalogo }, '⇩ Recibir catálogo de la oficina')));
+  const chkDestino = h('input', { type: 'checkbox', checked: await db.ajuste('pedirDestino', false), onchange: async (e) => { await db.fijarAjuste('pedirDestino', e.target.checked); aviso('Guardado', 'ok'); } });
+  raiz.append(h('section.tarjeta',
+    h('h2', 'Salidas'),
+    h('label.campo.check', chkDestino, h('span', 'Pedir el DESTINO (lote) antes de los productos')),
+    h('p.nota', 'Apagado: al escanear un producto el despacho se abre solo, con destino la finca escogida (lote GENERAL).')));
   raiz.append(await seccionAprendidos(personas, 'Personas que reciben', 'Nombre', 'Entregas', 'Todavía no hay nombres.'));
   raiz.append(await seccionAprendidos(labores, 'Labores', 'Labor', 'Despachos', 'Todavía no se ha escrito ninguna labor nueva.'));
   const sonido = await db.ajuste('sonido', true);
@@ -307,9 +313,31 @@ async function seccionEmpleados(lista) {
       h('thead', h('tr', h('th', 'Carné'), h('th', 'Código'), h('th', 'Nombre'), h('th', 'Fincas'), h('th', 'Estado'), h('th', ''))), cuerpo))) : h('p.vacio', 'Todavía no hay empleados.'),
     h('div.fila-botones',
       h('button.btn.primario', { type: 'button', disabled: !lista.length, onclick: () => importarEmpleados(lista) }, '⇧ Importar CSV de empleados'),
+      h('button.btn.primario', { type: 'button', disabled: !todos.length, onclick: () => pasarAlTelefono(lista) }, '📱 Pasar empleados al teléfono'),
       h('button.btn.secundario', { type: 'button', onclick: () => descargar('plantilla_empleados.csv', 'codigo,nombre,finca\r\n71529,Gonzalez Pushaina Rafael,B01\r\n') }, 'Plantilla CSV'),
       h('button.btn.secundario', { type: 'button', disabled: !todos.length, onclick: () => irALibroCarnes({ bodega: estado.bodega, alcance: 'carnes' }) }, '🖨 Carnés con nombre'),
       h('button.btn.secundario', { type: 'button', disabled: !lista.length, onclick: () => carnesEnBlanco(lista) }, '🖨 Carnés en blanco para fincas')));
+}
+
+/** Muestra en la pantalla del PC el QR con los empleados de una finca para que el teléfono lo lea. */
+async function pasarAlTelefono(lista) {
+  let cod = estado.bodega && lista.some((b) => b.codigo === estado.bodega) ? estado.bodega : lista[0]?.codigo;
+  if (lista.length > 1) {
+    const v = await formulario('Pasar empleados al teléfono', [
+      { nombre: 'bodega', etiqueta: 'Finca', tipo: 'select', opciones: lista.map((b) => ({ valor: b.codigo, texto: `${b.codigo} · ${b.nombre}` })), valor: cod },
+    ], { aceptar: 'Mostrar QR' });
+    if (!v) return;
+    cod = v.bodega;
+  }
+  const emps = (await empleados.paraBodegas([cod])).filter((e) => e.carne);
+  if (!emps.length) { aviso('Esa finca no tiene empleados con carné.', 'error'); return; }
+  // Sin cédula ni fotos: en la pantalla solo va lo que el teléfono necesita.
+  const datos = { tipo: 'empleados', bodegas: [cod], fecha: new Date().toISOString(),
+    empleados: emps.map((e) => ({ c: e.codigo, n: e.nombre, k: e.carne, f: e.fincas, a: e.activo === false ? 0 : 1 })) };
+  await traspaso.mostrar(datos, {
+    titulo: `${emps.length} empleado(s) de ${cod} → teléfono`,
+    nota: 'En el teléfono: pantalla Escanear (Salidas o Personal), apunte la cámara a este código hasta que diga «empleados cargados».',
+  });
 }
 
 async function carnesEnBlanco(lista) {

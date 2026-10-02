@@ -213,7 +213,7 @@ export async function alEscanearCarne(carne, bodega) {
     persona = { carne: n, codigo: emp.codigo, nombre: emp.nombre };
   } else {
     if (!(await empleados.deBodega(bodega)).length) {
-      return { texto: `Este teléfono no tiene la lista de empleados de ${bodega}. Ajustes (encargado) › Recibir catálogo de la oficina, o Abrir Oficina en esta app.`, tipo: 'error' };
+      return { texto: `Este teléfono no tiene los empleados de ${bodega}. En la Oficina (PC): Empleados › «📱 Pasar empleados al teléfono» y apunte la cámara a esa pantalla.`, tipo: 'error' };
     }
     const pendiente = (await ingresos.deCarne(n)) || (await registrarIngreso(n, bodega));
     if (!pendiente) return { texto: `Carné ${formatoCarne(n)}: ingreso no registrado.`, tipo: '' };
@@ -291,7 +291,7 @@ export async function alMostrar() {
   raiz.append(...[
     sinEmpleados ? h('section.tarjeta.tarjeta-alerta',
       h('h2', '⚠ Este teléfono no tiene empleados cargados'),
-      h('p.nota', 'Los carnés no se reconocen hasta que llegue la lista. Ajustes (encargado) › Recibir catálogo de la oficina (archivo catalogo_….json). Si la oficina se maneja en este mismo teléfono: Ajustes › Abrir Oficina en esta app, importe allí el CSV de empleados.')) : null,
+      h('p.nota', 'Los carnés no se reconocen hasta que llegue la lista. Lo más rápido: en la Oficina (PC) › Empleados › «📱 Pasar empleados al teléfono», y en este teléfono vaya a Escanear y apunte la cámara a la pantalla del PC. También sirve Ajustes › Recibir catálogo de la oficina.')) : null,
     h('div.kpis',
       kpi(String(abiertas.length), 'En labor ahora'),
       kpi(String(personas), 'Personas hoy'),

@@ -468,3 +468,8 @@ html, body { overflow-x: clip; }
 .btn-atras:active { background: rgba(255,255,255,.25); }
 @media (max-width: 380px) { .btn-atras span { display: none; } }
 @media (max-width: 600px) { .cabecera > .version { display: none; } }
+
+/* Traspaso por QR (oficina → teléfono) */
+.dialogo-traspaso { max-width: 640px; text-align: center; }
+.traspaso-qr svg { width: min(70vh, 520px, 86vw); height: auto; display: block; margin: 8px auto; background: #fff; }
+.traspaso-cuenta { font-weight: 700; color: var(--azul); }

@@ -115,6 +115,12 @@ export async function paraBodegas(codigos) {
   return (await todos()).filter((e) => e.fincas.some((f) => codigos.includes(f))).map(({ fotos, ...e }) => e);
 }
 
+/** El teléfono recibe los empleados de unas fincas (QR de la oficina): reemplaza solo esas. */
+export async function recibirDeBodegas(lista, codigos) {
+  const resto = (await todos()).filter((e) => !e.fincas.some((f) => codigos.includes(f)));
+  await guardarTodos([...resto, ...lista]);
+}
+
 /** La finca recibe la lista de la oficina tal cual. */
 export async function recibir(lista) {
   if (Array.isArray(lista)) await guardarTodos(lista);
