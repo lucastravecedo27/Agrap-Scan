@@ -255,28 +255,104 @@ export function alImprimirNuevos(fn) { irALibroNuevos = fn; }
 async function seccionCorreo(oficina) {
   const c = (await correo.config()) || { url: '', clave: '', hora: '17:00' };
   const url = h('input', { type: 'url', value: c.url, placeholder: 'https://script.google.com/macros/s/…/exec', autocomplete: 'off' });
-  const clave = h('input', { type: 'password', value: c.clave, placeholder: 'Clave del servicio (mín. 12)', autocomplete: 'new-password' });
+  const clave = h('input', { type: 'password', value: c.clave, placeholder: 'Clave de los teléfonos (mín. 12)', autocomplete: 'new-password' });
   const hora = h('input', { type: 'time', value: c.hora || '17:00' });
-  const bit = (await correo.leerBitacora()).slice(0, 8);
+  const guardarBase = () => correo.guardarConfig({ url: url.value, clave: clave.value, hora: hora.value });
   const cola = await correo.leerCola();
+
+  if (!oficina) {
+    const bit = (await correo.leerBitacora()).slice(0, 8);
+    return h('section.tarjeta',
+      h('h2', '📧 Correo del cierre'),
+      h('p.nota', 'El cierre del día sale por correo solo con el PIN del encargado. La configuración la manda la oficina en el catálogo.'),
+      c.url ? h('p', `Configurado · hora de cierre ${c.hora || '17:00'} · se envía a: ${(c.vista || []).join(', ') || 'contactos de la oficina'}`) : h('p.vacio', 'Sin configurar: falta recibir el catálogo de la oficina.'),
+      h('div.fila-botones', h('button.btn.secundario', { type: 'button', disabled: !c.url, onclick: async () => {
+        try { const r = await correo.probar(); informar('Correo de prueba enviado', `Salió a ${r.destinatarios} destinatario(s).`); } catch (e) { informar('No se pudo enviar', e.message); }
+      } }, 'Mandar correo de prueba')),
+      cola.length ? h('p.correo-cola', `⏳ ${cola.length} cierre(s) autorizados en cola (se mandan solos con señal).`) : null,
+      bit.length ? h('div', h('h3', 'Últimos envíos de este teléfono'), h('div.tabla-scroll.corta', h('table.tabla',
+        h('thead', h('tr', h('th', 'Fecha'), h('th', 'Cierre'), h('th', 'Autorizó'), h('th', 'Estado'))),
+        h('tbody', bit.map((r) => h('tr', h('td', new Date(r.ts).toLocaleString('es-CO')), h('td', `${r.bodega} · ${r.rango}`), h('td', r.autorizadoPor), h('td', r.ok ? `✓ ${r.destinatarios} correo(s)` : `✗ ${r.error}`))))))) : null);
+  }
+
+  // ----- Oficina: como el módulo Correo de AGRAP -----
+  const o = await correo.oficina();
+  const contactos = o.contactos.map((x) => ({ ...x }));
+  const claveAdmin = h('input', { type: 'password', value: o.claveAdmin, placeholder: 'Clave de oficina (otra, mín. 12)', autocomplete: 'new-password' });
+  const nombre = h('input', { type: 'text', value: o.nombre || 'Agrap', placeholder: 'Agrap' });
+  const firma = h('textarea.firma', { rows: 3, placeholder: 'Firma al pie del correo (nombre, cargo, teléfono)' }); firma.value = o.firma || '';
+  const cuerpo = h('tbody');
+  const pintarContactos = () => {
+    vaciar(cuerpo).append(...contactos.map((x, i) => h('tr', { class: x.activo ? '' : 'inactivo' },
+      h('td', h('strong', x.nombre || '—'), h('small.sub', x.cargo || '')), h('td', x.correo),
+      h('td', h('select', { onchange: (e) => { x.rol = e.target.value; } }, h('option', { value: 'para', selected: x.rol !== 'copia' }, 'Para'), h('option', { value: 'copia', selected: x.rol === 'copia' }, 'Copia'))),
+      h('td.acciones-celda',
+        h('button.btn.mini', { type: 'button', onclick: () => { x.activo = !x.activo; pintarContactos(); } }, x.activo ? 'Desactivar' : 'Activar'),
+        h('button.btn.mini', { type: 'button', onclick: () => { contactos.splice(i, 1); pintarContactos(); } }, 'Quitar')))));
+    if (!contactos.length) cuerpo.append(h('tr', h('td', { colspan: 4 }, 'Sin contactos. Agregue uno o importe los de AGRAP.')));
+  };
+  pintarContactos();
+  const agregar = async () => {
+    const v = await formulario('Nuevo contacto', [
+      { nombre: 'nombre', etiqueta: 'Nombre', requerido: true },
+      { nombre: 'correo', etiqueta: 'Correo', tipo: 'email', requerido: true },
+      { nombre: 'cargo', etiqueta: 'Cargo (opcional)' },
+      { nombre: 'rol', etiqueta: 'Recibe como', tipo: 'select', opciones: [{ valor: 'para', texto: 'Para' }, { valor: 'copia', texto: 'Copia (CC)' }], valor: 'para' },
+    ], { aceptar: 'Agregar', validar: (x) => (!correo.RE_CORREO.test(x.correo) ? 'Correo inválido (falta @ o el dominio).' : contactos.some((c2) => c2.correo === x.correo.toLowerCase()) ? 'Ese correo ya está.' : null) });
+    if (!v) return;
+    contactos.push({ correo: v.correo.toLowerCase(), nombre: v.nombre, cargo: v.cargo, rol: v.rol, activo: true });
+    pintarContactos();
+  };
+  const importar = async () => {
+    const [f] = await elegirArchivo({ aceptar: '.csv,text/csv' });
+    if (!f) return;
+    try {
+      const nuevos = correo.leerContactosCsv(await f.text(), contactos);
+      contactos.push(...nuevos); pintarContactos();
+      informar('Contactos importados', `${nuevos.length} contacto(s) nuevos, DESACTIVADOS. Active solo los que deben recibir el cierre y toque «Guardar y sincronizar».`);
+    } catch (e) { informar('No se pudo importar', e.message); }
+  };
+  const guardarTodo = async () => {
+    await guardarBase();
+    await correo.guardarOficina({ claveAdmin: claveAdmin.value, nombre: nombre.value, firma: firma.value, contactos });
+    return correo.sincronizar();
+  };
+  const bitCaja = h('div');
+  const verBitacora = async () => {
+    vaciar(bitCaja).append(h('p.vacio', 'Cargando…'));
+    try {
+      const r = await correo.bitacoraServicio();
+      vaciar(bitCaja).append(
+        h('p.nota', 'Todos los envíos de todas las fincas (los guarda el servicio). ', r.hoja ? h('a', { href: r.hoja, target: '_blank', rel: 'noopener' }, 'Abrir la hoja') : null),
+        r.filas.length ? h('div.tabla-scroll', h('table.tabla',
+          h('thead', h('tr', h('th', 'Fecha'), h('th', 'Finca · cierre'), h('th', 'Autorizó'), h('th', 'Destinatarios'), h('th', 'Estado'))),
+          h('tbody', r.filas.map((x) => h('tr', h('td', new Date(x.ts).toLocaleString('es-CO')), h('td', `${x.bodega} · ${x.rango}`, h('small.sub', x.adjuntos)), h('td', x.autorizadoPor), h('td', h('small', x.para)), h('td', x.ok ? '✓ Enviado' : `✗ ${x.error}`)))))) : h('p.vacio', 'Todavía no hay envíos.'));
+    } catch (e) { vaciar(bitCaja).append(h('p.error-form', e.message)); }
+  };
+
   return h('section.tarjeta',
     h('h2', '📧 Correo del cierre'),
-    h('p.nota', oficina
-      ? 'Servicio de Google Apps Script con la cuenta de la empresa (instrucciones en herramientas/correo). Los destinatarios se ponen en el servicio, no aquí. Al enviar el catálogo, la configuración llega a los teléfonos.'
-      : 'El cierre del día sale por correo solo con el PIN del encargado. La configuración la manda la oficina en el catálogo.'),
+    h('p.nota', 'Como el módulo Correo de AGRAP. El servicio de Google se publica con la cuenta de AGRAP (agritravecedo@gmail.com), así el correo sale del mismo remitente. Instrucciones en herramientas/correo/LEEME.md.'),
+    h('h3', 'Servicio'),
     h('div.fila-campos', h('label.campo', h('span', 'URL del servicio'), url)),
-    h('div.fila-campos', h('label.campo', h('span', 'Clave'), clave), h('label.campo', h('span', 'Hora de cierre (aviso)'), hora)),
+    h('div.fila-campos', h('label.campo', h('span', 'Clave de los teléfonos'), clave), h('label.campo', h('span', 'Clave de oficina (no sale de aquí)'), claveAdmin)),
+    h('div.fila-campos', h('label.campo', h('span', 'Nombre del remitente'), nombre), h('label.campo', h('span', 'Hora de cierre (aviso en la finca)'), hora)),
+    h('h3', `Contactos · ${contactos.filter((x) => x.activo).length} activos`),
+    h('div.tabla-scroll.corta', h('table.tabla', h('thead', h('tr', h('th', 'Nombre'), h('th', 'Correo'), h('th', 'Recibe'), h('th', ''))), cuerpo)),
     h('div.fila-botones',
-      h('button.btn.primario', { type: 'button', onclick: async () => {
-        try { await correo.guardarConfig({ url: url.value, clave: clave.value, hora: hora.value }); aviso('Correo guardado', 'ok'); } catch (e) { aviso(e.message, 'error', 6000); }
-      } }, 'Guardar'),
-      h('button.btn.secundario', { type: 'button', onclick: async () => {
-        try { await correo.guardarConfig({ url: url.value, clave: clave.value, hora: hora.value }); const r = await correo.probar(); informar('Correo de prueba enviado', `Llegó al servicio y salió a ${r.destinatarios} destinatario(s). Revise la bandeja de entrada.`); } catch (e) { informar('No se pudo enviar', e.message); }
+      h('button.btn.secundario', { type: 'button', onclick: agregar }, '+ Contacto'),
+      h('button.btn.secundario', { type: 'button', onclick: importar }, '⇧ Importar contactos (CSV de AGRAP)')),
+    h('label.campo', h('span', 'Firma'), firma),
+    h('div.fila-botones',
+      h('button.btn.primario.btn-grande', { type: 'button', onclick: async () => {
+        try { const r = await guardarTodo(); informar('Correo sincronizado', `El servicio quedó con ${r.activos} contacto(s) activos de ${r.contactos}. Remitente: ${r.remitente}. Envíe el catálogo a las fincas para que los teléfonos tengan la configuración.`); pintar(); } catch (e) { informar('No se pudo guardar', e.message); }
+      } }, 'Guardar y sincronizar'),
+      h('button.btn.secundario.btn-grande', { type: 'button', onclick: async () => {
+        try { await guardarBase(); const r = await correo.probar(); informar('Correo de prueba enviado', `Salió a ${r.destinatarios} destinatario(s). Revise la bandeja de entrada.`); } catch (e) { informar('No se pudo enviar', e.message); }
       } }, 'Mandar correo de prueba')),
-    cola.length ? h('p.correo-cola', `⏳ ${cola.length} cierre(s) autorizados en cola (se mandan solos con señal).`) : null,
-    bit.length ? h('div', h('h3', 'Últimos envíos'), h('div.tabla-scroll.corta', h('table.tabla',
-      h('thead', h('tr', h('th', 'Fecha'), h('th', 'Cierre'), h('th', 'Autorizó'), h('th', 'Estado'))),
-      h('tbody', bit.map((r) => h('tr', h('td', new Date(r.ts).toLocaleString('es-CO')), h('td', `${r.bodega} · ${r.rango}`), h('td', r.autorizadoPor), h('td', r.ok ? `✓ ${r.destinatarios} correo(s)` : `✗ ${r.error}`))))))) : null);
+    h('h3', 'Bitácora'),
+    h('button.btn.secundario', { type: 'button', onclick: verBitacora }, 'Ver envíos de todas las fincas'),
+    bitCaja);
 }
 
 // ---------- Bodegas ----------

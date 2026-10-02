@@ -26,7 +26,54 @@ export async function guardarConfig({ url, clave, hora }) {
   if (u && !/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(u)) throw new Error('La URL debe ser la de la aplicación web de Apps Script (https://script.google.com/macros/s/…/exec).');
   if (u && String(clave || '').length < 12) throw new Error('La clave debe tener al menos 12 caracteres.');
   if (hora && !/^\d{2}:\d{2}$/.test(hora)) throw new Error('Hora inválida.');
-  await db.fijarAjuste('correo', { url: u, clave: String(clave || ''), hora: hora || '17:00' });
+  const previo = await config();
+  await db.fijarAjuste('correo', { url: u, clave: String(clave || ''), hora: hora || '17:00', vista: previo?.vista || [] });
+}
+
+// ---------- Oficina: contactos, copia, firma y bitácora (como el módulo Correo de AGRAP) ----------
+//   ajustes.correoOficina {claveAdmin, nombre, firma, contactos: [{correo, nombre, cargo, rol: 'para'|'copia', activo}]}
+// La clave de oficina y la lista completa nunca viajan a los teléfonos.
+export const RE_CORREO = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+export const oficina = async () => db.ajuste('correoOficina', { claveAdmin: '', nombre: 'Agrap', firma: '', contactos: [] });
+export async function guardarOficina(o) {
+  const vistos = new Set();
+  const contactos = (o.contactos || []).map((c) => ({ correo: String(c.correo || '').trim().toLowerCase(), nombre: String(c.nombre || '').trim(), cargo: String(c.cargo || '').trim(), rol: c.rol === 'copia' ? 'copia' : 'para', activo: c.activo !== false }))
+    .filter((c) => RE_CORREO.test(c.correo) && !vistos.has(c.correo) && vistos.add(c.correo));
+  await db.fijarAjuste('correoOficina', { claveAdmin: String(o.claveAdmin || ''), nombre: String(o.nombre || 'Agrap'), firma: String(o.firma || ''), contactos });
+  // Lo que ven los teléfonos al autorizar: solo nombres de los activos (sin correos).
+  const c = await config();
+  if (c) await db.fijarAjuste('correo', { ...c, vista: contactos.filter((x) => x.activo).map((x) => x.nombre || x.correo.split('@')[0]) });
+}
+
+/** Manda contactos, nombre y firma al servicio (clave de oficina). */
+export async function sincronizar() {
+  const c = await config(); const o = await oficina();
+  if (!c?.url) throw new Error('Falta la URL del servicio.');
+  if ((o.claveAdmin || '').length < 12) throw new Error('Falta la clave de oficina (mín. 12 caracteres).');
+  const r = await postear(c, { tipo: 'config', claveAdmin: o.claveAdmin, contactos: o.contactos, nombre: o.nombre, firma: o.firma });
+  if (!r.ok) throw new Error(r.error || 'No se pudo sincronizar.');
+  return r;
+}
+
+/** Bitácora de TODAS las fincas, guardada por el servicio en una hoja de cálculo. */
+export async function bitacoraServicio() {
+  const c = await config(); const o = await oficina();
+  if (!c?.url || !o.claveAdmin) throw new Error('Configure la URL y la clave de oficina.');
+  const r = await postear(c, { tipo: 'bitacora', claveAdmin: o.claveAdmin, limite: 200 });
+  if (!r.ok) throw new Error(r.error || 'No se pudo leer la bitácora.');
+  return r;
+}
+
+/** CSV de contactos (nombre,correo,cargo) — p. ej. exportados de AGRAP. Entran desactivados. */
+export function leerContactosCsv(texto, actuales) {
+  const filas = String(texto).replace(/^\uFEFF/, '').split(/\r?\n/).map((l) => l.split(/[;,]/).map((x) => x.trim().replace(/^"|"$/g, '')));
+  const enc = (filas.shift() || []).map((x) => x.toLowerCase());
+  const i = { nombre: enc.indexOf('nombre'), correo: enc.indexOf('correo'), cargo: enc.indexOf('cargo') };
+  if (i.correo < 0) throw new Error('El CSV debe tener una columna «correo» (y opcionales «nombre», «cargo»).');
+  const ya = new Set(actuales.map((c) => c.correo));
+  const nuevos = filas.filter((f) => RE_CORREO.test((f[i.correo] || '').toLowerCase()) && !ya.has(f[i.correo].toLowerCase()))
+    .map((f) => ({ correo: f[i.correo].toLowerCase(), nombre: i.nombre >= 0 ? f[i.nombre] || '' : '', cargo: i.cargo >= 0 ? f[i.cargo] || '' : '', rol: 'para', activo: false }));
+  return nuevos;
 }
 
 // ---------- Qué hay para mandar ----------
@@ -174,7 +221,7 @@ export async function procesarCola() {
   try {
     for (const envio of await db.ajuste('correoCola', [])) {
       let r;
-      try { r = await postear(c, { clave: c.clave, asunto: envio.asunto, html: envio.html, texto: envio.texto, adjuntos: envio.adjuntos }); } catch (e) { r = { ok: false, error: e.name === 'AbortError' ? 'Sin respuesta (señal débil).' : 'Sin conexión.' }; }
+      try { r = await postear(c, { tipo: 'envio', clave: c.clave, bodega: envio.bodega, rango: envio.rango, autorizadoPor: envio.autorizadoPor, asunto: envio.asunto, html: envio.html, texto: envio.texto, adjuntos: envio.adjuntos }); } catch (e) { r = { ok: false, error: e.name === 'AbortError' ? 'Sin respuesta (señal débil).' : 'Sin conexión.' }; }
       const reg = { ts: new Date().toISOString(), bodega: envio.bodega, rango: envio.rango, asunto: envio.asunto, adjuntos: envio.adjuntos.map((a) => a.nombre), autorizadoPor: envio.autorizadoPor, ok: !!r.ok, error: r.ok ? '' : r.error, destinatarios: r.destinatarios || 0 };
       await bitacora(reg);
       if (!r.ok) {
@@ -206,7 +253,7 @@ export async function revisarYAutorizar(bodega) {
   const ok = await dialogo({
     titulo: 'Cierre del día: revisar y autorizar',
     clase: 'dialogo-correo',
-    contenido: h('div', h('p.nota', `Se enviará a los correos fijos de la empresa con ${previa.adjuntos.length} adjunto(s): ${previa.adjuntos.map((a) => a.nombre).join(', ')}.`), caja),
+    contenido: h('div', h('p.nota', `Se enviará a ${(await config())?.vista?.length ? (await config()).vista.join(', ') : 'los contactos de la oficina'} con ${previa.adjuntos.length} adjunto(s): ${previa.adjuntos.map((a) => a.nombre).join(', ')}.`), caja),
     botones: [{ texto: 'Ahora no', valor: false }, { texto: '✓ Autorizar y enviar', clase: 'primario', valor: true }],
   });
   if (!ok) return false;
@@ -221,7 +268,7 @@ export async function revisarYAutorizar(bodega) {
 export async function probar() {
   const c = await config();
   if (!c?.url) throw new Error('Falta la URL del servicio.');
-  const r = await postear(c, { clave: c.clave, asunto: 'Agrap Scan · correo de prueba', html: `<p>Prueba de correo desde Agrap Scan v${VERSION} (${esc(new Date().toLocaleString('es-CO'))}).</p>`, texto: 'Prueba de correo desde Agrap Scan.', adjuntos: [] });
+  const r = await postear(c, { tipo: 'prueba', clave: c.clave, asunto: 'Agrap Scan · correo de prueba', html: `<p>Prueba de correo desde Agrap Scan v${VERSION} (${esc(new Date().toLocaleString('es-CO'))}).</p>`, texto: 'Prueba de correo desde Agrap Scan.', adjuntos: [] });
   if (!r.ok) throw new Error(r.error || 'No se pudo enviar.');
   return r;
 }

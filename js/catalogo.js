@@ -303,7 +303,7 @@ export async function exportarActualizacion(codigosBodega) {
   out.usuarios = await usuarios.paraBodegas(bods.map((b) => b.codigo));
   out.empleados = await empleados.paraBodegas(bods.map((b) => b.codigo));
   const c = await db.ajuste('correo', null);
-  if (c?.url) out.correo = c;
+  if (c?.url) out.correo = { url: c.url, clave: c.clave, hora: c.hora, vista: c.vista || [] };
   return out;
 }
 
