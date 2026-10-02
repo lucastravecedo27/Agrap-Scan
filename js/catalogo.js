@@ -230,6 +230,37 @@ export async function guardarPaquete(resumen, { reemplazarEjemplo = false } = {}
     sinBodega: (resumen.productos?.validos.length || 0) - p.length + (resumen.destinos?.validos.length || 0) - d.length };
 }
 
+// ---------- Catálogo real publicado (./datos-iniciales) ----------
+async function leerPublicado() {
+  const leer = async (n) => {
+    const r = await fetch(`datos-iniciales/${n}`, { cache: 'no-store' });
+    if (!r.ok) throw new Error(n);
+    const t = await r.text();
+    if (/^\s*</.test(t)) throw new Error('no es CSV');
+    return t;
+  };
+  const [bodegasCsv, productosCsv, destinosCsv] = await Promise.all(['bodegas.csv', 'productos.csv', 'destinos.csv'].map(leer));
+  return analizarPaquete({ bodegasCsv, productosCsv, destinosCsv });
+}
+
+/** Fincas del catálogo real que este teléfono no tiene (o tiene solo como ejemplo). Sin internet: []. */
+export async function fincasPublicadasFaltantes() {
+  try {
+    const res = await leerPublicado();
+    const locales = new Map((await bodegas.listar()).map((b) => [b.codigo, b]));
+    return res.bodegas.filter((b) => !locales.has(b.codigo) || locales.get(b.codigo).ejemplo);
+  } catch { return []; }
+}
+
+/** Carga el catálogo real publicado; las fincas de EJEMPLO (y sus pruebas) se borran. */
+export async function cargarPublicado() {
+  const res = await leerPublicado();
+  const r = await guardarPaquete(res, { reemplazarEjemplo: true });
+  await db.fijarAjuste('origenDatos', 'iniciales');
+  await db.fijarAjuste('inicializado', true);
+  return r;
+}
+
 /**
  * La primera vez que se abre la app: carga ./datos-iniciales (catálogo real publicado)
  * y si no está, ./ejemplo. Un equipo que solo tiene el ejemplo, sin salidas registradas,

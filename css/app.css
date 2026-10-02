@@ -392,3 +392,4 @@ body[data-modo="personal"] #pendientes, body[data-modo="personal"] #bandaPendien
 html, body { overflow-x: hidden; }
 .tarjeta { max-width: 100%; overflow-x: auto; }
 .capa .dialogo { max-width: min(600px, calc(100vw - 24px)); }
+.lobby-finca.lobby-nueva { border-style: dashed; border-color: var(--amarillo); }

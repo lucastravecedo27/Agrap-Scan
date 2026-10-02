@@ -13,7 +13,7 @@ import * as configuracion from './configuracion.js';
 import * as usuarios from './usuarios.js';
 import * as jornada from './jornada.js';
 import * as modo from './modo.js';
-import { $, $$, h, vaciar, aviso, desbloquearAudio, fijarSonido } from './ui.js';
+import { $, $$, h, vaciar, aviso, confirmar, desbloquearAudio, fijarSonido } from './ui.js';
 
 const MODO = document.body.dataset.modo === 'oficina' ? 'oficina' : 'finca';
 const PANTALLAS = MODO === 'finca'
@@ -70,7 +70,15 @@ async function mostrarLobby() {
   const lista = (await bodegas.listar({ soloActivas: true })).filter((b) => !permitidas || permitidas.includes(b.codigo));
   const activa = await bodegas.bodegaActiva();
   if (!lista.length) cont.append(h('p.lobby-vacio', permitidas ? 'Su usuario no tiene fincas activas en este teléfono. Avise a la oficina.' : 'No hay fincas cargadas. El encargado debe recibir el catálogo de la oficina en Ajustes.'));
+  // Fincas del catálogo real que el teléfono aún no tiene (p. ej. sigue con el EJEMPLO): se cargan al tocarlas.
+  const publicadas = (await catalogo.fincasPublicadasFaltantes()).filter((b) => !permitidas || permitidas.includes(b.codigo));
+  const reemplazadas = new Set(publicadas.map((b) => b.codigo));
+  for (const p of publicadas) {
+    cont.append(h('button.lobby-finca.lobby-nueva', { type: 'button', onclick: () => cargarFincaPublicada(p) },
+      h('span.lobby-codigo', p.codigo), h('span.lobby-nombre', p.nombre), h('span.lobby-sub', 'Catálogo real · tocar para cargar')));
+  }
   for (const b of lista) {
+    if (b.ejemplo && reemplazadas.has(b.codigo)) continue;
     cont.append(h(`button.lobby-finca${b.codigo === activa ? '.actual' : ''}`, { type: 'button', onclick: () => escogerFinca(b) },
       h('span.lobby-codigo', b.codigo),
       h('span.lobby-nombre', b.nombre),
@@ -82,6 +90,20 @@ async function mostrarLobby() {
       onclick: async () => { await usuarios.salir(); await refrescarCabecera(); mostrarLobby(); },
     }, `Salir (${s.usuario})`));
   }
+}
+
+async function cargarFincaPublicada(p) {
+  const ejemplos = (await bodegas.listar()).filter((b) => b.ejemplo);
+  const pruebas = (await db.todos('lineas')).filter((l) => ejemplos.some((b) => b.codigo === l.bodega)).length;
+  const ok = await confirmar(`Cargar ${p.nombre}`, ejemplos.length
+    ? `Se cambian las fincas de EJEMPLO por el catálogo real${pruebas ? ` y se borran ${pruebas} salida(s) de prueba` : ''}. Empleados y usuarios no se tocan.`
+    : 'Se carga el catálogo real de la finca (productos y destinos).', { si: 'Cargar' });
+  if (!ok) return;
+  try {
+    const r = await catalogo.cargarPublicado();
+    aviso(`${p.nombre} cargada: ${r.productos} productos, ${r.destinos} destinos.`, 'ok', 5000);
+    await escogerFinca(await bodegas.obtener(p.codigo));
+  } catch (e) { aviso(`No se pudo cargar (¿hay internet?): ${e.message}`, 'error', 6000); }
 }
 
 function mostrarIngreso(cont) {
