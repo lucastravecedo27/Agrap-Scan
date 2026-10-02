@@ -91,7 +91,7 @@ export function crearLista({ prefijo, formatear: formatearFn = formatear, base =
    * Pantalla de elección: campo grande + sugerencias que se filtran al escribir.
    * Resuelve con el nombre escogido (ya registrado) o null si se cancela.
    */
-  async function elegir(bodega, { titulo = textos.titulo, subtitulo = '', actual = '', sugerida = '', aviso: avisoArriba = '', enlazar = null } = {}) {
+  async function elegir(bodega, { titulo = textos.titulo, subtitulo = '', actual = '', sugerida = '', aviso: avisoArriba = '', extra = null, enlazar = null } = {}) {
     const lista = await listar(bodega);
     const input = h('input.persona-input', {
       type: 'text', value: actual, placeholder: textos.placeholder,
@@ -147,7 +147,7 @@ export function crearLista({ prefijo, formatear: formatearFn = formatear, base =
 
     return dialogo({
       titulo, clase: 'dialogo-persona',
-      contenido: h('div', subtitulo ? h('p.persona-sub', subtitulo) : null, avisoArriba ? h('div.persona-aviso', avisoArriba) : null, input, nota, sugerencias),
+      contenido: h('div', subtitulo ? h('p.persona-sub', subtitulo) : null, avisoArriba ? h('div.persona-aviso', avisoArriba) : null, extra, input, nota, sugerencias),
       botones: [
         { texto: 'Cancelar', valor: null },
         { texto: 'Aceptar', clase: 'primario', valor: () => undefined, antes: async () => { await confirmar(input.value); return false; } },

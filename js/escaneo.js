@@ -350,6 +350,19 @@ function pedirCantidad(d, p) {
  */
 async function pedirQuienRecibe(d, p, cant, sugerida) {
   let escoger = null;
+  // La cámara queda tapada por el teclado y el diálogo: se muestra en vivo dentro del diálogo
+  // y el escáner lee de ese video visible (iOS puede dejar de actualizar un video tapado).
+  let vista = null;
+  const videoOriginal = escaner.video;
+  if (!escaner.activo) { try { await escaner.iniciar(); } catch { /* sin cámara: queda escribir */ } }
+  if (escaner.activo) {
+    const v = h('video', { playsinline: true, muted: true, autoplay: true });
+    v.muted = true; v.setAttribute('playsinline', '');
+    v.srcObject = escaner.stream;
+    v.play().catch(() => {});
+    escaner.video = v;
+    vista = h('div.persona-camara', v, h('div.persona-guia'));
+  }
   escaner.interceptor = (texto) => {
     const m = String(texto).trim().match(RE_CARNE);
     if (!m) return false; // un producto u otro código: se ignora mientras se espera el carné
@@ -363,12 +376,14 @@ async function pedirQuienRecibe(d, p, cant, sugerida) {
   try {
     return await personas.elegir(d.bodega, {
       subtitulo: `${p.nombre} · ${num(cant)} ${p.unidad}`,
-      aviso: '📷 Ponga el CARNÉ del trabajador bajo la cámara',
+      aviso: '📷 Ponga el CARNÉ del trabajador frente a la cámara',
+      extra: vista,
       sugerida,
       enlazar: (fn) => { escoger = fn; },
     });
   } finally {
     escaner.interceptor = null;
+    escaner.video = videoOriginal;
   }
 }
 
