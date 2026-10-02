@@ -20,6 +20,9 @@
     ol.pasos h2 { font-size: 1.15rem; margin: 4px 0 6px; }
     ol.pasos p, ol.pasos ul { margin: 6px 0; }
     .tecla-ios { display: inline-block; border: 2px solid var(--azul); border-radius: 8px; padding: 0 8px; font-weight: 600; color: var(--azul); white-space: nowrap; }
+    .sistemas { display: flex; gap: 8px; margin: 0 0 14px; }
+    .sistemas button { flex: 1; min-height: 56px; font-size: 1.1rem; font-weight: 700; border-radius: 14px; border: 2px solid var(--azul); background: #fff; color: var(--azul); cursor: pointer; }
+    .sistemas button[aria-pressed="true"] { background: var(--azul); color: #fff; }
     .abrir { display: flex; margin: 18px 0; }
     .abrir .btn { flex: 1; min-height: 64px; font-size: 1.15rem; text-decoration: none; }
   </style>
@@ -27,10 +30,14 @@
 <body>
   <header class="portada">
     <h1>Instalar Agrap Salidas</h1>
-    <p>En el iPhone de la estación de bodega · iOS 17 o superior</p>
+    <p>En el teléfono de la estación de bodega · iPhone (iOS 17+) o Android (Chrome)</p>
   </header>
   <main class="contenido">
-    <ol class="pasos">
+    <div class="sistemas" role="group" aria-label="Sistema del teléfono">
+      <button type="button" data-sistema="iphone" aria-pressed="true">iPhone</button>
+      <button type="button" data-sistema="android" aria-pressed="false">Android</button>
+    </div>
+    <ol class="pasos" data-sistema="iphone">
       <li>
         <h2>Abrir en Safari</h2>
         <p>Abra esta misma dirección en <strong>Safari</strong> (no en Chrome ni dentro de WhatsApp: desde ahí no se puede instalar). Si llegó por un enlace de WhatsApp, toque los tres puntos y elija <em>Abrir en Safari</em>.</p>
@@ -73,7 +80,57 @@
         <p>Al final del día: <em>Registros › Enviar CSV (WhatsApp…)</em>, revise las cantidades y mándelo al encargado.</p>
       </li>
     </ol>
+    <ol class="pasos" data-sistema="android" hidden>
+      <li>
+        <h2>Abrir en Chrome</h2>
+        <p>Abra esta misma dirección en <strong>Chrome</strong> (no dentro de WhatsApp). Si llegó por un enlace de WhatsApp, toque los tres puntos <span class="tecla-ios">⋮</span> y elija <em>Abrir en Chrome</em>.</p>
+      </li>
+      <li>
+        <h2>Instalar la app</h2>
+        <p>Toque <span class="tecla-ios">⋮</span> arriba a la derecha y luego <span class="tecla-ios">Instalar app</span> (en algunos teléfonos dice <em>Agregar a pantalla principal</em>). Confirme con <span class="tecla-ios">Instalar</span>.</p>
+        <p>También puede abrir la app y tocar <span class="tecla-ios">⊕ Instalar en este teléfono</span> en la pantalla de inicio. Desde ahora ábrala <strong>siempre desde el ícono</strong>: funciona sin internet.</p>
+      </li>
+      <li>
+        <h2>Permitir la cámara</h2>
+        <p>Abra la app, ingrese con su usuario, escoja la finca y toque <em>Iniciar escaneo</em>. Cuando pregunte por la cámara, toque <span class="tecla-ios">Mientras la app está en uso</span> o <span class="tecla-ios">Permitir</span>.</p>
+        <p>Si la negó por error: mantenga presionado el ícono de la app › <em>Información de la app › Permisos › Cámara › Permitir</em>, y vuelva a abrirla.</p>
+      </li>
+      <li>
+        <h2>Pantalla encendida y volumen</h2>
+        <p><em>Ajustes › Pantalla › Tiempo de espera de la pantalla</em> → el máximo. La app también pide mantener la pantalla encendida mientras escanea. Deje el teléfono conectado al cargador en el soporte.</p>
+        <p>Suba el <strong>volumen multimedia</strong> (botón lateral → el control de música) para oír el pito. En <em>Ajustes</em> de la app puede probarlo.</p>
+      </li>
+      <li>
+        <h2>Fijar la app</h2>
+        <p>Así la operaria no puede salir de la app por error:</p>
+        <ul>
+          <li><em>Ajustes › Seguridad › Más ajustes de seguridad › Fijar apps</em> (o <em>Fijar pantalla</em>) → actívelo y marque <em>Pedir PIN para dejar de fijar</em>.</li>
+          <li>Abra Agrap Salidas, toque el botón de <em>apps recientes</em> ▢, toque el ícono de la app arriba y elija <span class="tecla-ios">Fijar</span>.</li>
+          <li>Para salir: mantenga <em>Atrás</em> y <em>Recientes</em> a la vez (o deslice hacia arriba y mantenga) y escriba el PIN del teléfono.</li>
+        </ul>
+        <p>Dentro de la app el botón <em>Atrás</em> solo cierra la ventana abierta: no saca de la app.</p>
+      </li>
+      <li>
+        <h2>Recibir el catálogo y los usuarios</h2>
+        <p>La oficina manda <code>catalogo_….json</code> por WhatsApp. Ábralo en WhatsApp › <span class="tecla-ios">⋮</span> › <em>Guardar</em> (queda en <em>Descargas</em>). En la app: <em>Ajustes (encargado)</em> (PIN inicial <strong>1234</strong>, cámbielo enseguida) › <em>Recibir catálogo de la oficina</em> y escoja el archivo.</p>
+        <p>Si la oficina creó usuarios, desde ese momento cada persona ingresa con su usuario y contraseña y solo ve sus fincas.</p>
+      </li>
+      <li>
+        <h2>Probar</h2>
+        <p>Ponga la página de un destino bajo la cámara, escriba 3 letras de la labor, luego la página de un producto, digite la cantidad, Enter, y 3 letras de quien recibe.</p>
+        <p>Al final del día: <em>Registros › Enviar CSV</em>, revise las cantidades y escoja WhatsApp.</p>
+      </li>
+    </ol>
     <div class="abrir"><a class="btn primario" href="./">Abrir Agrap Salidas</a></div>
   </main>
+  <script>
+    // Muestra los pasos del sistema del teléfono (se puede cambiar con los botones).
+    const mostrar = (s) => {
+      document.querySelectorAll('ol.pasos').forEach((ol) => { ol.hidden = ol.dataset.sistema !== s; });
+      document.querySelectorAll('.sistemas button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.sistema === s)));
+    };
+    document.querySelectorAll('.sistemas button').forEach((b) => b.addEventListener('click', () => mostrar(b.dataset.sistema)));
+    if (/android/i.test(navigator.userAgent)) mostrar('android');
+  </script>
 </body>
 </html>

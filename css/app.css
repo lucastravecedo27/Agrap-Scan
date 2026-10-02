@@ -126,7 +126,7 @@ body.en-lobby { overflow: hidden; }
 .lobby-input:focus { outline: 3px solid var(--amarillo); outline-offset: 1px; }
 .lobby-error { color: #ffb4a8; font-weight: 600; min-height: 1.3em; margin: 0; }
 .lobby-salir { grid-column: 1 / -1; justify-self: start; margin-top: 6px; }
-.lobby-pie { margin-top: auto; padding-top: 28px; display: flex; align-items: center; justify-content: space-between; color: #8fa8b8; font-size: .85rem; }
+.lobby-pie { margin-top: auto; padding-top: 28px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; color: #8fa8b8; font-size: .85rem; }
 
 /* ---------- Escanear ---------- */
 .camara { position: relative; background: #000; height: 38vh; min-height: 220px; max-height: 420px; overflow: hidden; }

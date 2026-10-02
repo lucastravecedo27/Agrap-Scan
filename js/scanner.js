@@ -26,7 +26,7 @@ export class Escaner {
 
   async iniciar() {
     if (this.stream) return;
-    if (!navigator.mediaDevices?.getUserMedia) throw new Error('Este navegador no permite usar la cámara. Abra la app en Safari.');
+    if (!navigator.mediaDevices?.getUserMedia) throw new Error('Este navegador no permite usar la cámara. Abra la app en Safari (iPhone) o Chrome (Android).');
     this.alEstado('iniciando');
     this.stream = await navigator.mediaDevices.getUserMedia({
       audio: false,

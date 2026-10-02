@@ -10,7 +10,7 @@ import * as usuarios from './usuarios.js';
 import { VERSION, COLUMNAS_PRODUCTOS, COLUMNAS_DESTINOS } from './config.js';
 import {
   h, vaciar, num, aviso, confirmar, dialogo, formulario, informar, pedirPin,
-  elegirArchivo, descargar, hoy, compartirArchivo,
+  elegirArchivo, descargar, hoy, compartirArchivo, TIPOS_JSON, TIPOS_CSV,
   desbloquearAudio, sonidoOk, sonidoGuardado, sonidoError, fijarSonido,
 } from './ui.js';
 
@@ -90,7 +90,7 @@ async function seccionAprendidos(lista_, titulo, columna, conteo, vacio) {
 }
 
 async function recibirCatalogo() {
-  const [f] = await elegirArchivo({ aceptar: '.json,application/json' });
+  const [f] = await elegirArchivo({ aceptar: TIPOS_JSON });
   if (!f) return;
   let json, info;
   try { json = JSON.parse(await f.text()); info = catalogo.validarActualizacion(json); } catch (e) { informar('Archivo no válido', e.message); return; }
@@ -215,7 +215,7 @@ async function seccionNuevos(lista) {
   const subirLista = async () => {
     const bods = elegidas();
     if (!bods.length) { aviso('Escoja al menos una bodega.', 'error'); return; }
-    const [f] = await elegirArchivo({ aceptar: '.csv,text/csv' });
+    const [f] = await elegirArchivo({ aceptar: TIPOS_CSV });
     if (!f) return;
     const texto = await f.text();
     const analisis = [];
@@ -295,16 +295,17 @@ async function seccionUsuarios(lista) {
 }
 
 async function editarUsuario(u, lista) {
+  const fincasDe = (x) => lista.filter((b) => x[`f_${b.codigo}`]).map((b) => b.codigo);
   const v = await formulario(u ? `Editar ${u.usuario}` : 'Nuevo usuario', [
     { nombre: 'nombre', etiqueta: 'Nombre de la persona', valor: u?.nombre, requerido: true },
     { nombre: 'usuario', etiqueta: 'Usuario (sin espacios)', valor: u?.usuario, soloLectura: !!u, requerido: true },
     { nombre: 'clave', etiqueta: u ? 'Contraseña nueva (vacía = no cambia)' : 'Contraseña (mínimo 4)', tipo: 'password', requerido: !u },
     ...lista.map((b) => ({ nombre: `f_${b.codigo}`, etiqueta: `${b.codigo} · ${b.nombre}`, tipo: 'checkbox', valor: u ? u.fincas.includes(b.codigo) : lista.length === 1 })),
     { nombre: 'activo', etiqueta: 'Activo', tipo: 'checkbox', valor: u ? u.activo !== false : true },
-  ], { validar: (x) => (lista.some((b) => x[`f_${b.codigo}`]) ? null : 'Marque al menos una finca.') });
+  ], { validar: (x) => usuarios.validar({ ...x, fincas: fincasDe(x) }, { nuevo: !u }) });
   if (!v) return;
   try {
-    await usuarios.guardar({ ...v, fincas: lista.filter((b) => v[`f_${b.codigo}`]).map((b) => b.codigo) }, { nuevo: !u });
+    await usuarios.guardar({ ...v, fincas: fincasDe(v) }, { nuevo: !u });
     aviso('Usuario guardado. Envíe el catálogo a sus fincas.', 'ok', 5000); pintar();
   } catch (e) { aviso(e.message, 'error'); }
 }
@@ -437,7 +438,7 @@ function tablaErrores(errores) {
 }
 
 async function importar(cod, tipo) {
-  const [f] = await elegirArchivo({ aceptar: '.csv,text/csv' });
+  const [f] = await elegirArchivo({ aceptar: TIPOS_CSV });
   if (!f) return;
   const r = await catalogo.analizarCsv(await leerTexto(f), tipo, cod);
   if (r.columnasFaltantes.length) {
@@ -471,7 +472,7 @@ function seccionPaquete(lista) {
 }
 
 async function cargarPaquete(lista) {
-  const archivos = await elegirArchivo({ aceptar: '.csv,text/csv', multiple: true });
+  const archivos = await elegirArchivo({ aceptar: TIPOS_CSV, multiple: true });
   if (!archivos.length) return;
   const buscar = (n) => archivos.find((f) => f.name.toLowerCase().startsWith(n));
   const fb = buscar('bodegas'); const fp = buscar('productos'); const fd = buscar('destinos');
@@ -539,7 +540,7 @@ async function respaldar() {
 }
 
 async function restaurar() {
-  const [f] = await elegirArchivo({ aceptar: '.json,application/json' });
+  const [f] = await elegirArchivo({ aceptar: TIPOS_JSON });
   if (!f) return;
   let json;
   try { json = JSON.parse(await f.text()); } catch { aviso('El archivo no es JSON válido.', 'error'); return; }

@@ -53,6 +53,7 @@ async function mostrarLobby() {
   const cont = vaciar($('#lobbyFincas'));
   $('#lobby').hidden = false;
   document.body.classList.add('en-lobby');
+  $('#lobbyInstalar').hidden = !instalar;
   // Con usuarios creados por la oficina, primero se ingresa y solo salen las fincas asignadas.
   const permitidas = await usuarios.fincasPermitidas();
   const s = await usuarios.sesion();
@@ -122,7 +123,7 @@ async function iniciar() {
   try {
     await db.abrir();
   } catch (e) {
-    document.body.append(h('div.alerta.alerta-error', `No se pudo abrir la base de datos local: ${e.message}. Salga del modo privado de Safari.`));
+    document.body.append(h('div.alerta.alerta-error', `No se pudo abrir la base de datos local: ${e.message}. Salga del modo privado o incógnito del navegador.`));
     return;
   }
   fijarSonido(await db.ajuste('sonido', true));
@@ -149,8 +150,40 @@ async function iniciar() {
   // Para pruebas desde la consola: agrap.simular('B01-INS-0045')
   window.agrap = { simular: escaneo.simular, irA, db, VERSION, MODO };
   registrarSW();
+  if (MODO === 'finca') { guardarAtras(); ofrecerInstalacion(); }
   await refrescarCabecera();
   if (MODO === 'finca') await mostrarLobby(); else await irA('catalogo');
+}
+
+// ---------- Android: botón atrás e instalación ----------
+// En Android el botón atrás cierra la app instalada. Se deja siempre un paso de historial
+// propio: atrás cierra el diálogo o el teclado abierto y nunca saca de la app.
+function guardarAtras() {
+  history.pushState({ agrap: true }, '');
+  window.addEventListener('popstate', () => {
+    history.pushState({ agrap: true }, '');
+    const dialogos = $$('.capa');
+    if (dialogos.length) { dialogos[dialogos.length - 1]._cerrar?.(null); return; }
+    $('.capa-cantidad .tecla-cancelar')?.click();
+  });
+}
+
+// Chrome en Android avisa que la app se puede instalar: se ofrece un botón en el inicio.
+let instalar = null;
+function ofrecerInstalacion() {
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    instalar = e;
+    const b = $('#lobbyInstalar');
+    if (b) b.hidden = $('#lobby').hidden;
+  });
+  window.addEventListener('appinstalled', () => { instalar = null; const b = $('#lobbyInstalar'); if (b) b.hidden = true; });
+  $('#lobbyInstalar')?.addEventListener('click', async () => {
+    if (!instalar) return;
+    instalar.prompt();
+    await instalar.userChoice.catch(() => {});
+    instalar = null; $('#lobbyInstalar').hidden = true;
+  });
 }
 
 // ---------- Service worker: offline y actualización automática ----------

@@ -259,6 +259,10 @@ export function sonidoError() {
 }
 
 // ---------- Archivos ----------
+// Android marca a veces los .json/.csv que llegan por WhatsApp con otro tipo y el selector
+// los deja en gris: se aceptan también esos tipos.
+export const TIPOS_JSON = '.json,application/json,application/octet-stream,text/plain';
+export const TIPOS_CSV = '.csv,text/csv,text/comma-separated-values,application/vnd.ms-excel,text/plain';
 export function elegirArchivo({ aceptar = '', multiple = false } = {}) {
   return new Promise((resolve) => {
     const i = h('input', { type: 'file', accept: aceptar, multiple, style: 'display:none' });
@@ -277,7 +281,7 @@ export function descargar(nombre, contenido, tipo = 'text/csv;charset=utf-8') {
 }
 
 /**
- * Compartir con el menú de iOS. Resuelve 'compartido', 'cancelado' o 'no-soportado'.
+ * Compartir con el menú del teléfono (iPhone o Android). Resuelve 'compartido', 'cancelado' o 'no-soportado'.
  */
 export async function compartirArchivo(nombre, contenido, tipo = 'text/csv') {
   try {
