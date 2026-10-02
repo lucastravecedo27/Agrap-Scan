@@ -384,3 +384,7 @@ small.sub { display: block; color: var(--gris); font-weight: 400; font-size: .85
 .ingreso-oficina { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(260px, 1.2fr); gap: 14px; align-items: start; padding: 12px 0; border-top: 1px solid var(--linea); }
 @media (max-width: 760px) { .ingreso-oficina { grid-template-columns: 1fr 1fr; } .ingreso-oficina form { grid-column: 1 / -1; } }
 .carne-blanco .celda-nombre { color: #999; font-weight: 400; }
+body[data-modo="personal"] .solo-salidas, body[data-modo="personal"] .acumulado-caja,
+body[data-modo="personal"] #pendientes, body[data-modo="personal"] #bandaPendientes { display: none !important; }
+.lobby-modo { grid-template-columns: auto 1fr; min-height: 120px; }
+.lobby-icono { grid-row: span 2; font-size: 2.6rem; line-height: 1; }

@@ -12,6 +12,7 @@ import * as libro from './libro.js';
 import * as configuracion from './configuracion.js';
 import * as usuarios from './usuarios.js';
 import * as jornada from './jornada.js';
+import * as modo from './modo.js';
 import { $, $$, h, vaciar, aviso, desbloquearAudio, fijarSonido } from './ui.js';
 
 const MODO = document.body.dataset.modo === 'oficina' ? 'oficina' : 'finca';
@@ -35,13 +36,15 @@ async function refrescarCabecera() {
   if (MODO === 'oficina') return;
   const b = await bodegas.asegurarActiva();
   const s = await usuarios.sesion();
-  const [pSal, pJor] = [await usuarios.permite('salidas'), await usuarios.permite('jornada')];
-  $('.pestana[data-ir=jornada]').hidden = !pJor;
-  $('.pestana[data-ir=registros]').hidden = !pSal;
-  $('.pestanas').className = `pestanas pestanas-${2 + pSal + pJor}`;
+  // Las pestañas siguen el modo: Registros para salidas, Jornada para personal.
+  const m = await modo.actual();
+  document.body.dataset.modo = m;
+  $('.pestana[data-ir=jornada]').hidden = m !== 'personal';
+  $('.pestana[data-ir=registros]').hidden = m !== 'salidas';
+  $('.pestanas').className = 'pestanas pestanas-3';
   $('#bodegaActiva').textContent = b ? `${b.codigo} · ${b.nombre}` : 'Sin bodega';
-  $('#bodegaFinca').textContent = [b ? (b.finca && b.finca !== b.nombre ? b.finca : 'Bodega activa · tocar para cambiar') : '', s?.nombre].filter(Boolean).join(' · ');
-  const p = await exportar.resumenPendientes(b?.codigo || null);
+  $('#bodegaFinca').textContent = [`${modo.MODOS[m].icono} ${modo.MODOS[m].nombre}`, s?.nombre, 'tocar para cambiar'].filter(Boolean).join(' · ');
+  const p = await exportar.resumenPendientes(m === 'salidas' ? b?.codigo || null : '—');
   const ind = $('#pendientes');
   ind.hidden = !p.total;
   ind.textContent = `${p.total} sin exportar`;
@@ -116,10 +119,31 @@ async function escogerFinca(b) {
     if (!(await bodegas.exigirAdmin(`Cambiar la finca a ${b.codigo} · ${b.nombre}`))) return;
   }
   await bodegas.cambiarActiva(b.codigo);
+  const d = await modo.disponibles();
+  if (d.length > 1) { mostrarModos(b, d); return; }
+  await entrar(d[0] || 'salidas');
+}
+
+/** Segunda pregunta del inicio: qué va a registrar en esta finca. */
+async function mostrarModos(b, disponibles) {
+  const cont = vaciar($('#lobbyFincas'));
+  const previo = await modo.actual();
+  $('.lobby-pregunta').textContent = `${b.nombre}: ¿qué va a registrar?`;
+  for (const clave of disponibles) {
+    const m = modo.MODOS[clave];
+    cont.append(h(`button.lobby-finca.lobby-modo${clave === previo ? '.actual' : ''}`, { type: 'button', onclick: () => { desbloquearAudio(); entrar(clave); } },
+      h('span.lobby-icono', m.icono), h('span.lobby-nombre', m.nombre), h('span.lobby-sub', m.detalle)));
+  }
+  cont.append(h('button.btn.btn-claro.lobby-salir', { type: 'button', onclick: mostrarLobby }, '← Otra finca'));
+}
+
+async function entrar(clave) {
+  await modo.fijar(clave);
   cerrarLobby();
   await refrescarCabecera();
   actual = null;
   escaneo.audioDesbloqueado();
+  await escaneo.refrescar();
   await irA('escanear');
 }
 

@@ -5,7 +5,7 @@ HTML, CSS y JavaScript nativos, sin backend; funciona 100 % offline (IndexedDB +
 
 | Página | Quién la usa | Qué hace |
 |---|---|---|
-| `index.html` | iPhone fijo en la bodega de la finca | Lobby (escoger finca) → escanear destino y productos, digitar cantidad → Registros: revisar/corregir y enviar el CSV por WhatsApp |
+| `index.html` | Teléfono fijo en la finca | Lobby (escoger finca → **Salidas de bodega** o **Personal (jornada)**) → escanear destino y productos, digitar cantidad → Registros: revisar/corregir y enviar el CSV por WhatsApp |
 | `oficina.html` | Computador de la oficina | Productos nuevos, catálogo por bodega, destinos, **usuarios por finca**, libro de QR para imprimir y **enviar el catálogo a las fincas** (archivo `catalogo_….json`) |
 | `instalar.html` | Quien instala | Pasos para iPhone (Safari → Agregar a inicio, Acceso Guiado) y Android (Chrome → Instalar app, Fijar app) |
 

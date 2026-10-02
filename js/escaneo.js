@@ -8,6 +8,7 @@ import * as labores from './labores.js';
 import * as jornada from './jornada.js';
 import * as usuarios from './usuarios.js';
 import { RE_CARNE } from './config.js';
+import * as modo from './modo.js';
 import * as db from './db.js';
 import { Escaner, mantenerPantalla } from './scanner.js';
 import {
@@ -37,8 +38,8 @@ export function montar(contenedor, { alCambiarDatos }) {
     h('div.ultimo#ultimo'),
     h('div.acumulado-caja', h('h3', 'Acumulado del despacho'), h('div.acumulado#acumulado')),
     h('div.acciones-escaneo',
-      h('button.btn.secundario.btn-grande', { type: 'button', onclick: () => procesar('CMD-DESHACER') }, '↶ Deshacer'),
-      h('button.btn.oscuro.btn-grande', { type: 'button', onclick: () => procesar('CMD-CERRAR') }, '■ Cerrar despacho'),
+      h('button.btn.secundario.btn-grande.solo-salidas', { type: 'button', onclick: () => procesar('CMD-DESHACER') }, '↶ Deshacer'),
+      h('button.btn.oscuro.btn-grande.solo-salidas', { type: 'button', onclick: () => procesar('CMD-CERRAR') }, '■ Cerrar despacho'),
       h('button.btn.secundario.btn-grande', { type: 'button', onclick: digitarCodigo, title: 'Digitar un código' }, '⌨ Código'),
     ),
   );
@@ -106,6 +107,12 @@ export async function refrescar() {
     vaciar(ult); vaciar(acum);
     return;
   }
+  if ((await modo.actual()) === 'personal') {
+    franja.classList.remove('con-despacho');
+    vaciar(franja).append(h('div.franja-vacia', '👷 Escanee el CARNÉ de la persona: al empezar y al terminar la labor'));
+    vaciar(ult); vaciar(acum);
+    return;
+  }
   const d = await despacho.abierto(bod);
   vaciar(franja);
   if (d) {
@@ -119,7 +126,7 @@ export async function refrescar() {
     );
   } else {
     franja.classList.remove('con-despacho');
-    franja.append(h('div.franja-vacia', '① Escanee un DESTINO para abrir un despacho, o un CARNÉ para la jornada'));
+    franja.append(h('div.franja-vacia', '① Escanee un DESTINO para abrir un despacho'));
   }
   const lineas = d ? await despacho.lineasDe(d.id) : [];
   const ultima = lineas[lineas.length - 1];
@@ -152,6 +159,9 @@ export async function procesar(texto) {
     if (!bod) { error('No hay bodega activa.'); return; }
     // Carné de empleado: jornada (inicio o fin de labor).
     const carne = String(texto || '').trim().match(RE_CARNE);
+    const m = await modo.actual();
+    if (carne && m !== 'personal') { error('Está registrando SALIDAS. Para un carné, toque la cabecera y escoja Personal.'); return; }
+    if (!carne && m === 'personal') { error('Está registrando PERSONAL: escanee el carné. Para salidas, toque la cabecera y escoja Salidas.'); return; }
     if (carne) {
       if (!(await usuarios.permite('jornada'))) { error('Su usuario no registra jornadas.'); return; }
       sonidoOk();
