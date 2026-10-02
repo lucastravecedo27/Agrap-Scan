@@ -287,7 +287,8 @@ export async function alMostrar() {
   const selDia = h('select', dias.map((d) => h('option', { value: d }, d === h0 ? `Hoy (${d})` : d)));
 
   const sinEmpleados = !(await empleados.deBodega(bod)).length;
-  raiz.append(
+  // append nativo escribe «null» como texto: las secciones opcionales se filtran.
+  raiz.append(...[
     sinEmpleados ? h('section.tarjeta.tarjeta-alerta',
       h('h2', '⚠ Este teléfono no tiene empleados cargados'),
       h('p.nota', 'Los carnés no se reconocen hasta que llegue la lista. Ajustes (encargado) › Recibir catálogo de la oficina (archivo catalogo_….json). Si la oficina se maneja en este mismo teléfono: Ajustes › Abrir Oficina en esta app, importe allí el CSV de empleados.')) : null,
@@ -330,7 +331,7 @@ export async function alMostrar() {
       h('h2', 'RDT para nómina'),
       h('p.nota', 'El Reporte Diario en el formato de Agrosoft: una fila por persona y labor terminada, con código, horas, unidades a pagar y lotes.'),
       dias.length ? h('div.fila-campos', h('label.campo', h('span', 'Día'), selDia)) : h('p.vacio', 'Todavía no hay labores terminadas.'),
-      h('button.btn.primario.btn-grande', { type: 'button', disabled: !dias.length, onclick: () => descargarRdt(bod, selDia.value) }, '⇩ Descargar RDT')));
+      h('button.btn.primario.btn-grande', { type: 'button', disabled: !dias.length, onclick: () => descargarRdt(bod, selDia.value) }, '⇩ Descargar RDT'))].filter(Boolean));
   clearInterval(reloj);
   reloj = setInterval(() => { if (!document.querySelector('.capa')) alMostrar(); }, 60000);
 }

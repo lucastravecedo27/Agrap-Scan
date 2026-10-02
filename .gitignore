@@ -5,3 +5,9 @@ materiales/
 .DS_Store
 node_modules/
 __pycache__/
+
+# De datos-iniciales solo se publica el catálogo de Don Gaspar (lo que carga la app).
+datos-iniciales/*
+!datos-iniciales/bodegas.csv
+!datos-iniciales/productos.csv
+!datos-iniciales/destinos.csv

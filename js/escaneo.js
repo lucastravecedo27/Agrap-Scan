@@ -117,12 +117,15 @@ export async function refrescar() {
   vaciar(franja);
   if (d) {
     franja.classList.add('con-despacho');
+    // Compacta: la finca solo aparece si el gasto va a otra finca distinta a la de la bodega.
+    const b = await bodegas.obtener(bod);
+    const otraFinca = d.finca && b && d.finca !== b.finca && d.finca !== b.nombre;
     franja.append(
-      h('div.franja-id', d.id),
-      h('div.franja-datos',
-        h('span', h('small', 'Finca'), d.finca),
-        h('span', h('small', 'Lote'), d.lote),
-        h('span', h('small', 'Labor'), d.labor)),
+      h('div.franja-top',
+        h('span.franja-id', d.id),
+        h('span.franja-chip', d.lote),
+        otraFinca ? h('span.franja-chip.franja-otra', `→ ${d.finca}`) : null),
+      h('div.franja-labor', d.labor),
     );
   } else {
     franja.classList.remove('con-despacho');
@@ -132,10 +135,10 @@ export async function refrescar() {
   const ultima = lineas[lineas.length - 1];
   vaciar(ult);
   if (ultima) {
-    ult.append(h('small', 'Último registrado'),
+    ult.append(...[h('small', 'Último registrado'),
       h('div.ultimo-nombre', ultima.producto),
       h('div.ultimo-cant', `${num(ultima.cantidad)} ${ultima.unidad}`),
-      ultima.recibe ? h('div.ultimo-recibe', `→ ${ultima.recibe}`) : null);
+      ultima.recibe ? h('div.ultimo-recibe', `→ ${ultima.recibe}`) : null].filter(Boolean));
   } else if (d) {
     ult.append(h('div.ultimo-vacio', '② Escanee un PRODUCTO'));
   }

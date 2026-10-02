@@ -265,10 +265,21 @@ export async function cargarPublicado() {
  * Al abrir la app: si no hay fincas o hay de EJEMPLO, carga ./datos-iniciales (catálogo real
  * publicado, guardado también para usar sin internet).
  */
+/** Registros de las fincas de EJEMPLO que se perderían al reemplazarlas. */
+export async function pendientesDeEjemplo() {
+  const ejemplos = new Set((await bodegas.listar()).filter((b) => b.ejemplo).map((b) => b.codigo));
+  if (!ejemplos.size) return { salidas: 0, jornadas: 0, total: 0 };
+  const salidas = (await db.porIndice('lineas', 'exportado', 0)).filter((l) => ejemplos.has(l.bodega)).length;
+  const jornadas = (await db.todos('jornadas')).filter((j) => ejemplos.has(j.bodega) && (j.estado === 'abierta' || !j.exportado)).length;
+  return { salidas, jornadas, total: salidas + jornadas };
+}
+
 export async function precargarSiHaceFalta() {
-  // Las fincas de EJEMPLO (y sus pruebas) se reemplazan siempre por el catálogo real.
+  // Las fincas de EJEMPLO se reemplazan solas por el catálogo real SOLO si no tienen nada
+  // sin exportar. Si tienen, se deja la decisión al lobby, que pide confirmación.
   const hayEjemplo = (await bodegas.listar()).some((b) => b.ejemplo);
   if (!hayEjemplo && (await db.contar('bodegas')) > 0) { await db.fijarAjuste('inicializado', true); return null; }
+  if (hayEjemplo && (await pendientesDeEjemplo()).total > 0) return null;
   try {
     const r = await cargarPublicado();
     return { ...r, origen: 'iniciales', pruebasBorradas: hayEjemplo };

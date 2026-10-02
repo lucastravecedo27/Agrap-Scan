@@ -102,7 +102,14 @@ export async function exportarTodo() {
 
 export async function restaurarTodo(json) {
   if (!json || json.app !== 'agrap-salidas' || !json.datos) throw new Error('El archivo no es un respaldo de Agrap Scan.');
-  for (const n of ALMACENES) if (!Array.isArray(json.datos[n])) throw new Error(`Respaldo incompleto: falta «${n}».`);
+  // Almacenes que se agregaron después (jornadas en la v2.0): un respaldo viejo no los trae
+  // y se restauran vacíos. Los de la v1 sí son obligatorios.
+  const NUEVOS = ['jornadas'];
+  for (const n of ALMACENES) {
+    if (Array.isArray(json.datos[n])) continue;
+    if (NUEVOS.includes(n) && json.datos[n] == null) json.datos[n] = [];
+    else throw new Error(`Respaldo incompleto: falta «${n}».`);
+  }
   await tx(ALMACENES, 'readwrite', async (s) => {
     for (const n of ALMACENES) {
       await prom(s[n].clear());

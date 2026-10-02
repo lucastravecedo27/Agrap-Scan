@@ -82,7 +82,7 @@ async function mostrarLobby() {
     cont.append(h(`button.lobby-finca${b.codigo === activa ? '.actual' : ''}`, { type: 'button', onclick: () => escogerFinca(b) },
       h('span.lobby-codigo', b.codigo),
       h('span.lobby-nombre', b.nombre),
-      h('span.lobby-sub', [b.finca !== b.nombre ? b.finca : '', b.codigo === activa ? 'Última usada' : '', b.ejemplo ? 'Ejemplo' : ''].filter(Boolean).join(' · ') || ' ')));
+      h('span.lobby-sub', [b.finca !== b.nombre ? b.finca : '', b.codigo === activa ? 'Última usada' : '', b.ejemplo ? 'Ejemplo' : ''].filter(Boolean).join(' · '))));
   }
   if (s) {
     cont.append(h('button.btn.btn-claro.lobby-salir', {
@@ -94,10 +94,13 @@ async function mostrarLobby() {
 
 async function cargarFincaPublicada(p) {
   const ejemplos = (await bodegas.listar()).filter((b) => b.ejemplo);
-  const pruebas = (await db.todos('lineas')).filter((l) => ejemplos.some((b) => b.codigo === l.bodega)).length;
+  const pend = await catalogo.pendientesDeEjemplo();
+  const detalle = [pend.salidas ? `${pend.salidas} salida(s)` : '', pend.jornadas ? `${pend.jornadas} jornada(s)` : ''].filter(Boolean).join(' y ');
   const ok = await confirmar(`Cargar ${p.nombre}`, ejemplos.length
-    ? `Se cambian las fincas de EJEMPLO por el catálogo real${pruebas ? ` y se borran ${pruebas} salida(s) de prueba` : ''}. Empleados y usuarios no se tocan.`
-    : 'Se carga el catálogo real de la finca (productos y destinos).', { si: 'Cargar' });
+    ? (pend.total
+      ? `⚠ Las fincas de EJEMPLO tienen ${detalle} SIN EXPORTAR que se van a borrar. Si son reales, cancele y expórtelas primero en Registros / Jornada.`
+      : 'Se cambian las fincas de EJEMPLO por el catálogo real. Empleados y usuarios no se tocan.')
+    : 'Se carga el catálogo real de la finca (productos y destinos).', { si: pend.total ? 'Borrar y cargar' : 'Cargar', peligro: pend.total > 0 });
   if (!ok) return;
   try {
     const r = await catalogo.cargarPublicado();
@@ -126,6 +129,13 @@ function mostrarIngreso(cont) {
   }, usuario, clave, error, h('button.btn.primario.btn-grande', { type: 'submit' }, 'Ingresar'));
   cont.append(form);
   setTimeout(() => usuario.focus(), 60);
+}
+
+/** La franja del despacho queda pegada justo debajo de la cabecera, mida lo que mida. */
+function seguirCabecera() {
+  const cab = $('.cabecera');
+  if (!cab || !window.ResizeObserver) return;
+  new ResizeObserver(() => document.documentElement.style.setProperty('--alto-cabecera', `${cab.offsetHeight}px`)).observe(cab);
 }
 
 function cerrarLobby() {
@@ -203,7 +213,7 @@ async function iniciar() {
   // Para pruebas desde la consola: agrap.simular('B01-INS-0045')
   window.agrap = { simular: escaneo.simular, irA, db, VERSION, MODO };
   registrarSW();
-  if (MODO === 'finca') { guardarAtras(); ofrecerInstalacion(); }
+  if (MODO === 'finca') { guardarAtras(); ofrecerInstalacion(); seguirCabecera(); }
   await refrescarCabecera();
   if (MODO === 'finca') await mostrarLobby(); else await irA('catalogo');
 }
