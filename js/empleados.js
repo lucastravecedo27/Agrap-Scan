@@ -43,8 +43,8 @@ export async function asignarCarnesFaltantes() {
 
 // ---------- Importar CSV ----------
 /**
- * Lee el CSV sin guardar. Un mismo código en varias filas suma fincas.
- * -> {validos:[{codigo,nombre,cedula,fincas}], errores:[{fila, motivo}], faltan:[columnas]}
+ * Lee el CSV sin guardar (columnas opcionales: cedula, carne). Un mismo código en varias filas suma fincas.
+ * -> {validos:[{codigo,nombre,cedula,carne,fincas}], errores:[{fila, motivo}], faltan:[columnas]}
  */
 export function analizarCsv(texto, bodegasValidas) {
   const { columnas, registros } = aObjetos(texto);
@@ -56,7 +56,8 @@ export function analizarCsv(texto, bodegasValidas) {
     const codigo = limpiarCodigo(r.codigo); const nombre = formatearNombre(r.nombre); const finca = String(r.finca || '').trim().toUpperCase();
     const motivo = !codigo ? 'código vacío' : !nombre ? 'nombre vacío' : !bodegasValidas.includes(finca) ? `finca «${r.finca}» no existe (use el código: B01…)` : null;
     if (motivo) { res.errores.push({ fila: i + 2, motivo }); return; }
-    const e = porCodigo.get(codigo) || { codigo, nombre, cedula: limpiarCodigo(r.cedula), fincas: [] };
+    const carne = Number(limpiarCodigo(r.carne)) || null;
+    const e = porCodigo.get(codigo) || { codigo, nombre, cedula: limpiarCodigo(r.cedula), carne, fincas: [] };
     if (!e.fincas.includes(finca)) e.fincas.push(finca);
     porCodigo.set(codigo, e);
   });
@@ -78,9 +79,11 @@ export async function importar(validos) {
   }
   for (const e of nuevos.values()) {
     const p = previo.get(e.codigo);
-    out.push({ ...p, ...e, cedula: e.cedula || p?.cedula || '', carne: p?.carne || null, activo: true });
+    out.push({ ...p, ...e, cedula: e.cedula || p?.cedula || '', carne: e.carne || p?.carne || null, activo: true });
   }
   await guardarTodos(out);
+  const mayor = Math.max(0, ...out.map((e) => Number(e.carne) || 0));
+  if (mayor >= (await db.ajuste('carneSiguiente', 1))) await db.fijarAjuste('carneSiguiente', mayor + 1);
   const conCarne = await asignarCarnesFaltantes();
   return { importados: nuevos.size, inactivados: out.filter((e) => e.activo === false && !nuevos.has(e.codigo)).length, carnes: conCarne };
 }
