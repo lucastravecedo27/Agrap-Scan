@@ -10,7 +10,7 @@ import * as escaneo from './escaneo.js';
 import * as exportar from './exportar.js';
 import * as libro from './libro.js';
 import * as configuracion from './configuracion.js';
-import { $, $$, h, vaciar, aviso, desbloquearAudio } from './ui.js';
+import { $, $$, h, vaciar, aviso, desbloquearAudio, fijarSonido } from './ui.js';
 
 const MODO = document.body.dataset.modo === 'oficina' ? 'oficina' : 'finca';
 const PANTALLAS = MODO === 'finca'
@@ -89,6 +89,7 @@ async function iniciar() {
     document.body.append(h('div.alerta.alerta-error', `No se pudo abrir la base de datos local: ${e.message}. Salga del modo privado de Safari.`));
     return;
   }
+  fijarSonido(await db.ajuste('sonido', true));
   const pre = await catalogo.precargarSiHaceFalta();
   if (pre) aviso(pre.origen === 'ejemplo' ? 'Se cargó un catálogo de EJEMPLO.' : `Datos iniciales cargados: ${pre.bodegas} bodegas, ${pre.productos} productos.`, 'info', 6000);
 
@@ -106,7 +107,8 @@ async function iniciar() {
     libro.montar($('[data-pantalla=libro]'));
   }
   $$('.pestana').forEach((b) => b.addEventListener('click', () => irA(b.dataset.ir)));
-  document.addEventListener('pointerdown', () => bodegas.renovarAdmin(), { passive: true });
+  // Cada toque reactiva el audio: iOS lo suspende al bloquear la pantalla o cambiar de app.
+  document.addEventListener('pointerdown', () => { bodegas.renovarAdmin(); if (MODO === 'finca') desbloquearAudio(); }, { passive: true });
 
   // Para pruebas desde la consola: agrap.simular('B01-INS-0045')
   window.agrap = { simular: escaneo.simular, irA, db, VERSION, MODO };

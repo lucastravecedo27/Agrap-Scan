@@ -8,6 +8,7 @@ import { VERSION, COLUMNAS_PRODUCTOS, COLUMNAS_DESTINOS } from './config.js';
 import {
   h, vaciar, num, aviso, confirmar, dialogo, formulario, informar, pedirPin,
   elegirArchivo, descargar, hoy, compartirArchivo,
+  desbloquearAudio, sonidoOk, sonidoGuardado, sonidoError, fijarSonido,
 } from './ui.js';
 
 let raiz = null;
@@ -51,6 +52,17 @@ async function pintarFinca() {
     h('p', recibido ? `Último catálogo recibido: ${new Date(recibido).toLocaleString('es-CO')}` : 'Todavía no se ha recibido catálogo de la oficina.'),
     h('ul.resumen', resumen),
     h('button.btn.primario.btn-grande', { type: 'button', onclick: recibirCatalogo }, '⇩ Recibir catálogo de la oficina')));
+  const sonido = await db.ajuste('sonido', true);
+  const probar = (fn) => () => { desbloquearAudio(); fijarSonido(true); fn(); fijarSonido(chkSonido.checked); };
+  const chkSonido = h('input', { type: 'checkbox', checked: sonido, onchange: async (e) => { await db.fijarAjuste('sonido', e.target.checked); fijarSonido(e.target.checked); aviso('Guardado', 'ok'); } });
+  raiz.append(h('section.tarjeta',
+    h('h2', 'Sonido'),
+    h('label.campo.check', chkSonido, h('span', 'Pitar al leer un código')),
+    h('div.fila-botones',
+      h('button.btn.secundario', { type: 'button', onclick: probar(sonidoOk) }, '🔊 Pito de lectura'),
+      h('button.btn.secundario', { type: 'button', onclick: probar(sonidoGuardado) }, '🔊 Pito de guardado'),
+      h('button.btn.secundario', { type: 'button', onclick: probar(sonidoError) }, '🔊 Pito de error')),
+    h('p.nota', 'Suba el volumen del iPhone con los botones laterales. El pito suena aunque el interruptor de silencio esté puesto.')));
   raiz.append(await seccionAjustes());
 }
 

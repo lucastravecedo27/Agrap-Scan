@@ -210,30 +210,51 @@ export function tecladoNumerico({ decimal = true, alTeclear }) {
 }
 
 // ---------- Sonido y vibración ----------
+// El pito de lector: tono agudo y fuerte (~2,7 kHz, como un lector de código de barras).
+// En iOS el audio web se calla con el interruptor de silencio; con audioSession
+// «playback» (Safari 16.4+) suena igual, como un reproductor de música.
 let _audio;
+let _sonido = true;
+export function fijarSonido(activo) { _sonido = !!activo; }
+
 /** Debe llamarse desde un toque del usuario: iOS solo deja sonar audio desbloqueado así. */
 export function desbloquearAudio() {
   try {
+    if (navigator.audioSession) navigator.audioSession.type = 'playback';
     _audio = _audio || new (window.AudioContext || window.webkitAudioContext)();
-    if (_audio.state === 'suspended') _audio.resume();
+    if (_audio.state !== 'running') _audio.resume();
     const o = _audio.createOscillator(); const g = _audio.createGain();
     g.gain.value = 0; o.connect(g).connect(_audio.destination); o.start(); o.stop(_audio.currentTime + 0.01);
   } catch { /* sin audio */ }
 }
-function tono(freq, inicio, dur, vol = 0.25) {
-  if (!_audio) return;
+
+function tono(freq, inicio, dur, vol = 0.5, tipo = 'square') {
+  if (!_audio || !_sonido) return;
+  // iOS suspende el audio al bloquear o salir de la app: se reanuda en cada pito.
+  if (_audio.state !== 'running') _audio.resume();
   const o = _audio.createOscillator(); const g = _audio.createGain();
-  o.type = 'square'; o.frequency.value = freq;
-  const t = _audio.currentTime + inicio;
-  g.gain.setValueAtTime(vol, t); g.gain.setValueAtTime(0, t + dur);
+  o.type = tipo; o.frequency.value = freq;
+  const t = _audio.currentTime + inicio + 0.01;
+  // Rampa de 5 ms para que no chasquee.
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(vol, t + 0.005);
+  g.gain.setValueAtTime(vol, t + dur - 0.005);
+  g.gain.linearRampToValueAtTime(0, t + dur);
   o.connect(g).connect(_audio.destination); o.start(t); o.stop(t + dur + 0.02);
 }
+/** Lectura correcta: un pito agudo. */
 export function sonidoOk() {
-  tono(1760, 0, 0.09);
+  tono(2700, 0, 0.15, 0.6);
   if (navigator.vibrate) navigator.vibrate(60);
 }
+/** Cantidad guardada: dos pitos cortos, para saber que quedó registrada. */
+export function sonidoGuardado() {
+  tono(2200, 0, 0.07, 0.5); tono(2900, 0.1, 0.09, 0.5);
+  if (navigator.vibrate) navigator.vibrate([40, 40, 40]);
+}
+/** Error: dos pitos graves y largos. */
 export function sonidoError() {
-  tono(330, 0, 0.16, 0.35); tono(330, 0.24, 0.16, 0.35);
+  tono(300, 0, 0.22, 0.7); tono(300, 0.32, 0.22, 0.7);
   if (navigator.vibrate) navigator.vibrate([120, 80, 120]);
 }
 

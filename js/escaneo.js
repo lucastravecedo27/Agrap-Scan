@@ -6,7 +6,7 @@ import * as bodegas from './bodegas.js';
 import { Escaner, mantenerPantalla } from './scanner.js';
 import {
   $, h, vaciar, num, aviso, confirmar, dialogo, tecladoNumerico,
-  sonidoOk, sonidoError, desbloquearAudio,
+  sonidoOk, sonidoError, sonidoGuardado, desbloquearAudio,
 } from './ui.js';
 
 let escaner = null;
@@ -234,7 +234,7 @@ function pedirCantidad(d, p) {
               if (!ok) { guardando = false; return; }
             }
             const l = await despacho.agregarLinea(d, p, cant);
-            sonidoOk();
+            sonidoGuardado();
             mostrarMensaje(`✓ ${l.producto} · ${num(l.cantidad)} ${l.unidad}`, 'ok');
             cerrar();
           } catch (e) {
