@@ -5,6 +5,8 @@
 // Las sugerencias salen desde la 3.ª letra.
 
 import * as db from './db.js';
+import * as empleados from './empleados.js';
+import { formatoCarne } from './config.js';
 import { h, vaciar, dialogo, aviso } from './ui.js';
 
 const MAX_SUGERENCIAS = 8;
@@ -39,18 +41,27 @@ export function filtrar(lista, texto) {
  * nombre nuevo; base: nombres que salen aunque no se hayan usado; textos: rótulos;
  * enterPrimera: Enter toma la primera sugerencia (para listas cerradas como las labores);
  * cerrada: solo se escoge de la base, no se crean nombres nuevos; detalle(nombre): texto
- * corto a la derecha de cada opción.
+ * corto a la derecha de cada opción. baseDe(bodega): base que depende de la bodega (p. ej.
+ * sus empleados) -> [{nombre, detalle}].
  */
-export function crearLista({ prefijo, formatear: formatearFn = formatear, base = [], textos, enterPrimera = false, cerrada = false, detalle = null }) {
+export function crearLista({ prefijo, formatear: formatearFn = formatear, base = [], baseDe = null, textos, enterPrimera = false, cerrada = false, detalle = null }) {
   const clave = (bodega) => `${prefijo}:${bodega}`;
   const canonico = new Map(base.map((n) => [normalizar(n), n]));
+  const detalles = new Map();
+  // Base fija + la de la bodega (se lee cada vez: los empleados cambian al recibirlos).
+  async function cargarBase(bodega) {
+    const extra = baseDe ? await baseDe(bodega) : [];
+    for (const e of extra) { canonico.set(normalizar(e.nombre), e.nombre); if (e.detalle) detalles.set(e.nombre, e.detalle); }
+    return [...base, ...extra.map((e) => e.nombre)];
+  }
   // Lo que coincide con la base (sin importar tildes ni mayúsculas) queda con la ortografía de la base.
   const escribir = (nombre) => { const f = formatearFn(nombre); return canonico.get(normalizar(f)) || f; };
 
   async function listar(bodega, { soloAprendidos = false } = {}) {
     const l = await db.ajuste(clave(bodega), []);
+    const todaBase = await cargarBase(bodega);
     const vistos = new Set(l.map((p) => normalizar(p.nombre)));
-    const extra = soloAprendidos ? [] : base.filter((n) => !vistos.has(normalizar(n))).map((nombre) => ({ nombre, usos: 0, ultimo: '' }));
+    const extra = soloAprendidos ? [] : todaBase.filter((n) => !vistos.has(normalizar(n))).map((nombre) => ({ nombre, usos: 0, ultimo: '' }));
     return [...l, ...extra]
       .sort((a, b) => b.usos - a.usos || (b.ultimo || '').localeCompare(a.ultimo || '') || a.nombre.localeCompare(b.nombre, 'es'));
   }
@@ -108,7 +119,7 @@ export function crearLista({ prefijo, formatear: formatearFn = formatear, base =
       for (const p of encontrados) {
         if (sugerida && !texto && p.nombre === sugerida) continue;
         sugerencias.append(h('button.persona-opcion', { type: 'button', role: 'option', onclick: () => confirmar(p.nombre) },
-          h('span', p.nombre), h('small', detalle ? detalle(p.nombre) : p.usos ? `${p.usos} ${p.usos === 1 ? textos.uso : textos.usos}` : '')));
+          h('span', p.nombre), h('small', detalle ? detalle(p.nombre) : [detalles.get(p.nombre), p.usos ? `${p.usos} ${p.usos === 1 ? textos.uso : textos.usos}` : ''].filter(Boolean).join(' · '))));
       }
       if (!cerrada && normalizar(texto).length >= MIN_LETRAS && nuevo && !exacto) {
         sugerencias.append(h('button.persona-opcion.persona-nueva', { type: 'button', onclick: () => confirmar(nuevo) },
@@ -146,11 +157,14 @@ export function crearLista({ prefijo, formatear: formatearFn = formatear, base =
 
 export const { listar, registrar, eliminar, elegir } = crearLista({
   prefijo: 'personas',
+  // Los empleados de la finca salen como sugerencia aunque nunca hayan recibido nada.
+  baseDe: async (bodega) => (await empleados.deBodega(bodega)).filter((e) => e.activo !== false)
+    .map((e) => ({ nombre: e.nombre, detalle: `cód. ${e.codigo}${e.carne ? ` · carné ${formatoCarne(e.carne)}` : ''}` })),
   textos: {
     titulo: '¿Quién recibe?', placeholder: 'Escriba el nombre…', aria: 'Nombre de quien recibe',
     vacio: 'Escriba el nombre de quien recibe.', mismo: 'Mismo', nuevo: 'Nueva', uso: 'entrega', usos: 'entregas',
     primera: 'Primera vez: escriba el nombre completo. La app lo recordará.',
-    ayuda: 'Escriba 3 letras del nombre o apellido.',
+    ayuda: 'Escriba 3 letras del nombre o apellido (salen los trabajadores de la finca).',
     sinCoincidencias: 'No hay nadie con esas letras: se guardará como nuevo.',
   },
 });
