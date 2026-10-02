@@ -6,6 +6,7 @@ import * as bodegas from './bodegas.js';
 import * as catalogo from './catalogo.js';
 import * as personas from './personas.js';
 import * as labores from './labores.js';
+import * as usuarios from './usuarios.js';
 import { VERSION, COLUMNAS_PRODUCTOS, COLUMNAS_DESTINOS } from './config.js';
 import {
   h, vaciar, num, aviso, confirmar, dialogo, formulario, informar, pedirPin,
@@ -94,11 +95,11 @@ async function recibirCatalogo() {
   let json, info;
   try { json = JSON.parse(await f.text()); info = catalogo.validarActualizacion(json); } catch (e) { informar('Archivo no válido', e.message); return; }
   const hayEjemplo = (await bodegas.listar()).some((b) => b.ejemplo);
-  const ok = await confirmar('Recibir catálogo', `Catálogo de la oficina del ${new Date(info.fecha).toLocaleString('es-CO')}: ${info.bodegas} bodega(s), ${info.productos} productos, ${info.destinos} destinos. Los registros de salidas no se tocan.`, { si: 'Recibir' });
+  const ok = await confirmar('Recibir catálogo', `Catálogo de la oficina del ${new Date(info.fecha).toLocaleString('es-CO')}: ${info.bodegas} bodega(s), ${info.productos} productos, ${info.destinos} destinos, ${info.usuarios} usuario(s). Los registros de salidas no se tocan.`, { si: 'Recibir' });
   if (!ok) return;
   try {
     const r = await catalogo.importarActualizacion(json, { reemplazarEjemplo: hayEjemplo });
-    informar('Catálogo actualizado', `${r.bodegas} bodega(s), ${r.productos} productos y ${r.destinos} destinos.`);
+    informar('Catálogo actualizado', `${r.bodegas} bodega(s), ${r.productos} productos, ${r.destinos} destinos y ${r.usuarios} usuario(s).`);
     alCambio(); pintarFinca();
   } catch (e) { aviso(e.message, 'error'); }
 }
@@ -122,7 +123,7 @@ function seccionEnviar(lista) {
   };
   return h('section.tarjeta.tarjeta-nuevos',
     h('h2', 'Enviar catálogo a las fincas'),
-    h('p.nota', 'Genera un archivo con bodegas, productos y destinos. Mándelo por WhatsApp al encargado: en el teléfono de la finca se carga en Ajustes › Recibir catálogo. Lo desactivado aquí queda desactivado allá.'),
+    h('p.nota', 'Genera un archivo con bodegas, productos, destinos y usuarios. Mándelo por WhatsApp al encargado: en el teléfono de la finca se carga en Ajustes › Recibir catálogo. Lo desactivado aquí queda desactivado allá.'),
     h('div.marcas-bodegas', lista.map((b, i) => h('label.campo.check', marcas[i], h('span', `${b.codigo} · ${b.nombre}`)))),
     h('div.fila-botones',
       h('button.btn.primario.btn-grande', { type: 'button', onclick: () => correr('compartir') }, 'Enviar (WhatsApp…)'),
@@ -147,6 +148,7 @@ async function pintar() {
   raiz.append(await seccionNuevos(lista));
   raiz.append(seccionEnviar(lista));
   raiz.append(seccionBodegas(lista));
+  raiz.append(await seccionUsuarios(lista));
   if (estado.bodega) raiz.append(await seccionCatalogo(lista));
   raiz.append(seccionPaquete(lista));
   raiz.append(await seccionAjustes());
@@ -265,6 +267,46 @@ function seccionBodegas(lista) {
     h('div.fila-botones',
       h('button.btn.primario', { type: 'button', onclick: () => editarBodega(null, lista) }, '+ Nueva bodega'),
       h('button.btn.secundario', { type: 'button', disabled: lista.length < 2, onclick: () => copiar(lista) }, 'Copiar catálogo entre bodegas')));
+}
+
+// ---------- Usuarios ----------
+async function seccionUsuarios(lista) {
+  const us = await usuarios.listar();
+  const nombreFinca = (c) => lista.find((b) => b.codigo === c)?.nombre || c;
+  return h('section.tarjeta',
+    h('h2', 'Usuarios que digitan'),
+    h('p.nota', 'Cada usuario solo ve en el teléfono las fincas que tenga asignadas. Viajan en el catálogo: después de crear o cambiar un usuario, envíe el catálogo a esas fincas. Sin usuarios, el teléfono queda abierto como antes.'),
+    us.length ? h('div.tabla-scroll', h('table.tabla',
+      h('thead', h('tr', h('th', 'Nombre'), h('th', 'Usuario'), h('th', 'Fincas'), h('th', 'Estado'), h('th', ''))),
+      h('tbody', us.map((u) => h('tr', { class: u.activo === false ? 'inactivo' : '' },
+        h('td', u.nombre), h('td', h('strong', u.usuario)), h('td', u.fincas.map((f) => `${f} · ${nombreFinca(f)}`).join(', ')),
+        h('td', u.activo === false ? 'Desactivado' : 'Activo'),
+        h('td.acciones-celda',
+          h('button.btn.mini', { type: 'button', onclick: () => editarUsuario(u, lista) }, 'Editar'),
+          h('button.btn.mini', {
+            type: 'button',
+            onclick: async () => {
+              if (!(await confirmar('¿Eliminar usuario?', `«${u.usuario}» ya no podrá ingresar después de enviar el catálogo. Sus registros no cambian.`, { si: 'Eliminar', peligro: true }))) return;
+              await usuarios.eliminar(u.usuario); pintar();
+            },
+          }, 'Eliminar')))))))
+      : h('p.vacio', 'Todavía no hay usuarios: los teléfonos entran sin contraseña.'),
+    h('div.fila-botones', h('button.btn.primario', { type: 'button', disabled: !lista.length, onclick: () => editarUsuario(null, lista) }, '+ Nuevo usuario')));
+}
+
+async function editarUsuario(u, lista) {
+  const v = await formulario(u ? `Editar ${u.usuario}` : 'Nuevo usuario', [
+    { nombre: 'nombre', etiqueta: 'Nombre de la persona', valor: u?.nombre, requerido: true },
+    { nombre: 'usuario', etiqueta: 'Usuario (sin espacios)', valor: u?.usuario, soloLectura: !!u, requerido: true },
+    { nombre: 'clave', etiqueta: u ? 'Contraseña nueva (vacía = no cambia)' : 'Contraseña (mínimo 4)', tipo: 'password', requerido: !u },
+    ...lista.map((b) => ({ nombre: `f_${b.codigo}`, etiqueta: `${b.codigo} · ${b.nombre}`, tipo: 'checkbox', valor: u ? u.fincas.includes(b.codigo) : lista.length === 1 })),
+    { nombre: 'activo', etiqueta: 'Activo', tipo: 'checkbox', valor: u ? u.activo !== false : true },
+  ], { validar: (x) => (lista.some((b) => x[`f_${b.codigo}`]) ? null : 'Marque al menos una finca.') });
+  if (!v) return;
+  try {
+    await usuarios.guardar({ ...v, fincas: lista.filter((b) => v[`f_${b.codigo}`]).map((b) => b.codigo) }, { nuevo: !u });
+    aviso('Usuario guardado. Envíe el catálogo a sus fincas.', 'ok', 5000); pintar();
+  } catch (e) { aviso(e.message, 'error'); }
 }
 
 async function editarBodega(b, lista = []) {

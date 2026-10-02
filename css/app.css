@@ -121,6 +121,11 @@ body.en-lobby { overflow: hidden; }
 .lobby-nombre { font-size: 1.45rem; font-weight: 700; }
 .lobby-sub { font-size: .9rem; color: #b8cad6; }
 .lobby-vacio { color: #b8cad6; }
+.lobby-ingreso { display: flex; flex-direction: column; gap: 12px; max-width: 420px; }
+.lobby-input { min-height: 60px; font-size: 1.35rem; border-radius: var(--radio); border: 2px solid rgba(255,255,255,.35); background: rgba(255,255,255,.95); color: var(--azul-profundo); padding: 8px 16px; }
+.lobby-input:focus { outline: 3px solid var(--amarillo); outline-offset: 1px; }
+.lobby-error { color: #ffb4a8; font-weight: 600; min-height: 1.3em; margin: 0; }
+.lobby-salir { grid-column: 1 / -1; justify-self: start; margin-top: 6px; }
 .lobby-pie { margin-top: auto; padding-top: 28px; display: flex; align-items: center; justify-content: space-between; color: #8fa8b8; font-size: .85rem; }
 
 /* ---------- Escanear ---------- */

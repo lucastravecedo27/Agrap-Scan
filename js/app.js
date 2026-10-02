@@ -10,6 +10,7 @@ import * as escaneo from './escaneo.js';
 import * as exportar from './exportar.js';
 import * as libro from './libro.js';
 import * as configuracion from './configuracion.js';
+import * as usuarios from './usuarios.js';
 import { $, $$, h, vaciar, aviso, desbloquearAudio, fijarSonido } from './ui.js';
 
 const MODO = document.body.dataset.modo === 'oficina' ? 'oficina' : 'finca';
@@ -32,8 +33,9 @@ async function irA(nombre) {
 async function refrescarCabecera() {
   if (MODO === 'oficina') return;
   const b = await bodegas.asegurarActiva();
+  const s = await usuarios.sesion();
   $('#bodegaActiva').textContent = b ? `${b.codigo} · ${b.nombre}` : 'Sin bodega';
-  $('#bodegaFinca').textContent = b ? (b.finca && b.finca !== b.nombre ? b.finca : 'Bodega activa · tocar para cambiar') : '';
+  $('#bodegaFinca').textContent = [b ? (b.finca && b.finca !== b.nombre ? b.finca : 'Bodega activa · tocar para cambiar') : '', s?.nombre].filter(Boolean).join(' · ');
   const p = await exportar.resumenPendientes(b?.codigo || null);
   const ind = $('#pendientes');
   ind.hidden = !p.total;
@@ -48,18 +50,51 @@ async function refrescarCabecera() {
 async function mostrarLobby() {
   if (actual && PANTALLAS[actual].alOcultar) PANTALLAS[actual].alOcultar();
   actual = null;
-  const lista = await bodegas.listar({ soloActivas: true });
-  const activa = await bodegas.bodegaActiva();
   const cont = vaciar($('#lobbyFincas'));
-  if (!lista.length) cont.append(h('p.lobby-vacio', 'No hay fincas cargadas. El encargado debe recibir el catálogo de la oficina en Ajustes.'));
+  $('#lobby').hidden = false;
+  document.body.classList.add('en-lobby');
+  // Con usuarios creados por la oficina, primero se ingresa y solo salen las fincas asignadas.
+  const permitidas = await usuarios.fincasPermitidas();
+  const s = await usuarios.sesion();
+  if (permitidas && !s) { mostrarIngreso(cont); return; }
+  $('.lobby-pregunta').textContent = s ? `Hola, ${s.nombre.split(' ')[0]}. ¿En qué finca está?` : '¿En qué finca está?';
+  const lista = (await bodegas.listar({ soloActivas: true })).filter((b) => !permitidas || permitidas.includes(b.codigo));
+  const activa = await bodegas.bodegaActiva();
+  if (!lista.length) cont.append(h('p.lobby-vacio', permitidas ? 'Su usuario no tiene fincas activas en este teléfono. Avise a la oficina.' : 'No hay fincas cargadas. El encargado debe recibir el catálogo de la oficina en Ajustes.'));
   for (const b of lista) {
     cont.append(h(`button.lobby-finca${b.codigo === activa ? '.actual' : ''}`, { type: 'button', onclick: () => escogerFinca(b) },
       h('span.lobby-codigo', b.codigo),
       h('span.lobby-nombre', b.nombre),
       h('span.lobby-sub', [b.finca !== b.nombre ? b.finca : '', b.codigo === activa ? 'Última usada' : '', b.ejemplo ? 'Ejemplo' : ''].filter(Boolean).join(' · ') || ' ')));
   }
-  $('#lobby').hidden = false;
-  document.body.classList.add('en-lobby');
+  if (s) {
+    cont.append(h('button.btn.btn-claro.lobby-salir', {
+      type: 'button',
+      onclick: async () => { await usuarios.salir(); await refrescarCabecera(); mostrarLobby(); },
+    }, `Salir (${s.usuario})`));
+  }
+}
+
+function mostrarIngreso(cont) {
+  $('.lobby-pregunta').textContent = 'Ingrese con su usuario';
+  const usuario = h('input.lobby-input', { type: 'text', placeholder: 'Usuario', autocomplete: 'username', autocapitalize: 'none', autocorrect: 'off', spellcheck: false });
+  const clave = h('input.lobby-input', { type: 'password', placeholder: 'Contraseña', autocomplete: 'current-password' });
+  const error = h('p.lobby-error', { role: 'alert' });
+  const form = h('form.lobby-ingreso', {
+    onsubmit: async (e) => {
+      e.preventDefault();
+      desbloquearAudio();
+      try {
+        const s = await usuarios.ingresar(usuario.value, clave.value);
+        const suyas = (await bodegas.listar({ soloActivas: true })).filter((b) => s.fincas.includes(b.codigo));
+        // Una sola finca: entra directo a escanear.
+        if (suyas.length === 1) { await escogerFinca(suyas[0]); return; }
+        await refrescarCabecera(); mostrarLobby();
+      } catch (err) { error.textContent = err.message; clave.value = ''; clave.focus(); }
+    },
+  }, usuario, clave, error, h('button.btn.primario.btn-grande', { type: 'submit' }, 'Ingresar'));
+  cont.append(form);
+  setTimeout(() => usuario.focus(), 60);
 }
 
 function cerrarLobby() {
@@ -70,7 +105,8 @@ function cerrarLobby() {
 async function escogerFinca(b) {
   desbloquearAudio(); // este toque deja sonar el pitido y abrir la cámara sin otro toque
   const activa = await bodegas.bodegaActiva();
-  if (b.codigo !== activa && (await db.ajuste('pinCambioFinca', true))) {
+  // Un usuario cambia entre sus fincas sin PIN: la oficina ya se las asignó.
+  if (b.codigo !== activa && !(await usuarios.sesion()) && (await db.ajuste('pinCambioFinca', true))) {
     if (!(await bodegas.exigirAdmin(`Cambiar la finca a ${b.codigo} · ${b.nombre}`))) return;
   }
   await bodegas.cambiarActiva(b.codigo);

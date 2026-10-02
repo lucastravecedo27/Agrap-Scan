@@ -1,29 +1,27 @@
 // Labores a las que se cargan las salidas. Misma lógica que las personas: se aprenden por
-// bodega y se escogen con 2–3 letras. La base sale del registro de labores de nómina de
-// Don Gaspar (2026), sin las variantes de pago (festivo, dominical, al día, H.e.d., color
-// de cinta) y con la ortografía corregida.
+// bodega y se escogen escribiendo 3 letras. La base sale del registro de labores de nómina
+// de Don Gaspar (2026): solo labores de campo, sin conceptos contables ni de pago (festivo,
+// dominical, al día, H.e.d., color de cinta) y con la ortografía corregida.
 
 import { crearLista, normalizar } from './personas.js';
 
-const BASE = {
-  'Corte y empaque': ['Corte y empaque', 'Corte mercado nacional', 'Cargue de cajas', 'Botada de vástago', 'Acarreo de fruta', 'Precalibración'],
-  'Embolse': ['Embolse y amarre', 'Desflore e identificación', 'Protección de fruta', 'Reamarre y desvío', 'Colocación de yumbolón',
-    'Protección contra quema de sol', 'Conteo de cinta'],
-  'Control de Sigatoka': ['Deshoje', 'Fumigación aérea'],
-  'Control de maleza': ['Control de maleza', 'Limpia con guadaña', 'Limpia a machete', 'Desbejuque', 'Desguasque', 'Limpia de linderos',
-    'Limpia de reservorio'],
-  'Control de enfermedades': ['Control de Moko', 'Mantenimiento de pediluvio', 'Control de insectos', 'Bioseguridad'],
-  'Control de población': ['Desmache', 'Repique de matas'],
-  'Fertilización': ['Aplicación de fertilizante', 'Aplicación foliar', 'Descargue de fertilizante'],
-  'Riego': ['Riego', 'Mantenimiento de riego', 'Mantenimiento de manguera', 'Instalación de riego', 'Motor de riego'],
-  'Drenajes': ['Chapia de canal', 'Recava de canal', 'Limpia de canal de riego', 'Limpia de jarillón'],
-  'Siembra': ['Siembra', 'Resiembra', 'Vivero'],
-  'Mantenimiento': ['Mantenimiento de cable vía', 'Mantenimiento de infraestructura', 'Mantenimiento de cerca', 'Mantenimiento de garruchas',
-    'Mantenimiento de guadaña', 'Mantenimiento de motor', 'Mantenimiento de retroexcavadora', 'Mantenimiento de empacadora', 'Pintura'],
-  'Aseo': ['Aseo de empacadora', 'Aseo de bodega', 'Aseo de plantación', 'Aseo de casa administrativa', 'Aseo general'],
-  'Administración': ['Administración', 'Almacén', 'Casino', 'Celaduría', 'Dotación y EPP', 'Descargue de cartón', 'Descargue de insumos',
-    'Recolección de plástico'],
-};
+const BASE = [
+  'Corte y empaque', 'Corte mercado nacional', 'Cargue de cajas', 'Botada de vástago', 'Acarreo de fruta', 'Precalibración',
+  'Embolse y amarre', 'Desflore e identificación', 'Protección de fruta', 'Reamarre y desvío', 'Colocación de yumbolón',
+  'Protección contra quema de sol', 'Conteo de cinta',
+  'Deshoje', 'Fumigación aérea',
+  'Control de maleza', 'Limpia con guadaña', 'Limpia a machete', 'Desbejuque', 'Desguasque', 'Limpia de linderos', 'Limpia de reservorio',
+  'Control de Moko', 'Mantenimiento de pediluvio', 'Control de insectos', 'Bioseguridad',
+  'Desmache', 'Repique de matas',
+  'Aplicación de fertilizante', 'Aplicación foliar', 'Descargue de fertilizante',
+  'Riego', 'Mantenimiento de riego', 'Mantenimiento de manguera', 'Instalación de riego',
+  'Chapia de canal', 'Recava de canal', 'Limpia de canal de riego', 'Limpia de jarillón',
+  'Siembra', 'Resiembra', 'Vivero',
+  'Mantenimiento de cable vía', 'Mantenimiento de infraestructura', 'Mantenimiento de cerca', 'Mantenimiento de garruchas',
+  'Mantenimiento de guadaña', 'Mantenimiento de motor', 'Mantenimiento de retroexcavadora', 'Mantenimiento de empacadora', 'Pintura',
+  'Aseo de empacadora', 'Aseo de bodega', 'Aseo de plantación', 'Aseo de casa administrativa', 'Aseo general',
+  'Descargue de cartón', 'Descargue de insumos', 'Recolección de plástico',
+];
 
 // Palabras que en nómina y WorldOffice llegan sin tilde o en mayúsculas.
 const PALABRAS = Object.fromEntries(`aplicación fertilización protección identificación instalación recolección población
@@ -50,12 +48,12 @@ export const { listar, registrar, eliminar, elegir } = crearLista({
   prefijo: 'labores',
   formatear,
   enterPrimera: true,
-  base: Object.entries(BASE).flatMap(([grupo, l]) => l.map((nombre) => ({ nombre, grupo }))),
+  base: BASE,
   textos: {
     titulo: '¿Qué labor?', placeholder: 'Escriba la labor…', aria: 'Labor', mayusculas: 'sentences',
     vacio: 'Escriba la labor.', mismo: 'Misma', nuevo: 'Nueva', uso: 'despacho', usos: 'despachos',
     primera: 'Escriba la labor. La app la recordará.',
-    ayuda: 'Escriba 2–3 letras (fert, mal, emb…) o toque una labor.',
+    ayuda: 'Escriba 3 letras de la labor (fer, mal, emb…).',
     sinCoincidencias: 'No hay labores con esas letras: se guardará como nueva.',
   },
 });
@@ -63,6 +61,5 @@ export const { listar, registrar, eliminar, elegir } = crearLista({
 /** Ortografía de la base para una labor que llega escrita de otra forma (catálogo, CSV). */
 export function escribir(texto) {
   const f = formatear(texto);
-  for (const l of Object.values(BASE)) for (const n of l) if (normalizar(n) === normalizar(f)) return n;
-  return f;
+  return BASE.find((n) => normalizar(n) === normalizar(f)) || f;
 }

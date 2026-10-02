@@ -1,12 +1,14 @@
 // Listas que la app aprende por bodega (personas que reciben, labores): la primera vez
 // se escribe completo y después basta con 2–3 letras para escogerlo.
 // Se guardan en «ajustes» (entran solos en el respaldo) como [{nombre, usos, ultimo}].
-// Una lista puede traer una base fija [{nombre, grupo}] que aparece sin haberse usado.
+// Una lista puede traer una base fija de nombres que aparece sin haberse usado.
+// Las sugerencias salen desde la 3.ª letra.
 
 import * as db from './db.js';
 import { h, vaciar, dialogo, aviso } from './ui.js';
 
 const MAX_SUGERENCIAS = 8;
+export const MIN_LETRAS = 3;
 
 /** Sin tildes, minúsculas: «Ñ» se conserva distinta de «N» porque cambia el nombre. */
 export const normalizar = (s) => String(s || '').toLowerCase()
@@ -19,38 +21,35 @@ export function formatear(nombre) {
     .replace(/(^|[\s'-])(\p{L})/gu, (m, sep, letra) => sep + letra.toUpperCase());
 }
 
-/** Nombres que empiezan por el texto (por el nombre, cualquier otra palabra o el grupo). */
+/** Nombres que empiezan por el texto (por el nombre o cualquier otra palabra), desde 3 letras. */
 export function filtrar(lista, texto) {
   const t = normalizar(texto);
-  if (!t) return lista.slice(0, MAX_SUGERENCIAS);
-  const empiezaTodo = []; const empiezaPalabra = []; const empiezaGrupo = [];
-  const enPalabras = (s) => normalizar(s).split(' ').some((pal) => pal.startsWith(t));
+  if (t.length < MIN_LETRAS) return [];
+  const empiezaTodo = []; const empiezaPalabra = [];
   for (const p of lista) {
     const n = normalizar(p.nombre);
     if (n.startsWith(t)) empiezaTodo.push(p);
-    else if (enPalabras(p.nombre)) empiezaPalabra.push(p);
-    else if (p.grupo && enPalabras(p.grupo)) empiezaGrupo.push(p);
+    else if (n.split(' ').some((pal) => pal.startsWith(t))) empiezaPalabra.push(p);
   }
-  return [...empiezaTodo, ...empiezaPalabra, ...empiezaGrupo].slice(0, MAX_SUGERENCIAS);
+  return [...empiezaTodo, ...empiezaPalabra].slice(0, MAX_SUGERENCIAS);
 }
 
 /**
  * Crea una lista aprendida. prefijo: clave en ajustes; formatearFn: cómo se escribe un
- * nombre nuevo; base: [{nombre, grupo}] que sale aunque no se haya usado; textos: rótulos;
+ * nombre nuevo; base: nombres que salen aunque no se hayan usado; textos: rótulos;
  * enterPrimera: Enter toma la primera sugerencia (para listas cerradas como las labores).
  */
 export function crearLista({ prefijo, formatear: formatearFn = formatear, base = [], textos, enterPrimera = false }) {
   const clave = (bodega) => `${prefijo}:${bodega}`;
-  const grupoDe = new Map(base.map((b) => [normalizar(b.nombre), b.grupo || '']));
-  const canonico = new Map(base.map((b) => [normalizar(b.nombre), b.nombre]));
+  const canonico = new Map(base.map((n) => [normalizar(n), n]));
   // Lo que coincide con la base (sin importar tildes ni mayúsculas) queda con la ortografía de la base.
   const escribir = (nombre) => { const f = formatearFn(nombre); return canonico.get(normalizar(f)) || f; };
 
   async function listar(bodega, { soloAprendidos = false } = {}) {
     const l = await db.ajuste(clave(bodega), []);
     const vistos = new Set(l.map((p) => normalizar(p.nombre)));
-    const extra = soloAprendidos ? [] : base.filter((b) => !vistos.has(normalizar(b.nombre))).map((b) => ({ ...b, usos: 0, ultimo: '' }));
-    return [...l.map((p) => ({ ...p, grupo: grupoDe.get(normalizar(p.nombre)) || '' })), ...extra]
+    const extra = soloAprendidos ? [] : base.filter((n) => !vistos.has(normalizar(n))).map((nombre) => ({ nombre, usos: 0, ultimo: '' }));
+    return [...l, ...extra]
       .sort((a, b) => b.usos - a.usos || (b.ultimo || '').localeCompare(a.ultimo || '') || a.nombre.localeCompare(b.nombre, 'es'));
   }
 
@@ -96,7 +95,7 @@ export function crearLista({ prefijo, formatear: formatearFn = formatear, base =
       const exacto = lista.find((p) => normalizar(p.nombre) === normalizar(nuevo));
       const encontrados = filtrar(lista, texto);
       // Escrito completo pero con otra forma (mayúsculas, sin tildes, «al día»…): ese de primero.
-      if (texto && exacto && !encontrados.includes(exacto)) encontrados.unshift(exacto);
+      if (normalizar(texto).length >= MIN_LETRAS && exacto && !encontrados.includes(exacto)) encontrados.unshift(exacto);
       vaciar(sugerencias);
       // Lo mismo suele repetirse seguido: un toque o Enter sin escribir.
       if (sugerida && !texto) {
@@ -106,14 +105,14 @@ export function crearLista({ prefijo, formatear: formatearFn = formatear, base =
       for (const p of encontrados) {
         if (sugerida && !texto && p.nombre === sugerida) continue;
         sugerencias.append(h('button.persona-opcion', { type: 'button', role: 'option', onclick: () => confirmar(p.nombre) },
-          h('span', p.nombre), h('small', p.usos ? `${p.usos} ${p.usos === 1 ? textos.uso : textos.usos}` : p.grupo)));
+          h('span', p.nombre), h('small', p.usos ? `${p.usos} ${p.usos === 1 ? textos.uso : textos.usos}` : '')));
       }
-      if (nuevo && !exacto) {
+      if (normalizar(texto).length >= MIN_LETRAS && nuevo && !exacto) {
         sugerencias.append(h('button.persona-opcion.persona-nueva', { type: 'button', onclick: () => confirmar(nuevo) },
           h('span', `+ ${textos.nuevo}: ${nuevo}`), h('small', 'se guarda para la próxima')));
       }
-      nota.textContent = !lista.length ? textos.primera
-        : !texto ? textos.ayuda : (!encontrados.length ? textos.sinCoincidencias : '');
+      const n = normalizar(texto).length;
+      nota.textContent = !lista.length ? textos.primera : n < MIN_LETRAS ? textos.ayuda : (!encontrados.length ? textos.sinCoincidencias : '');
     };
     input.addEventListener('input', pintar);
     input.addEventListener('keydown', (e) => {
@@ -123,7 +122,7 @@ export function crearLista({ prefijo, formatear: formatearFn = formatear, base =
       // Enter: si lo escrito coincide con uno o hay una sola sugerencia, ese; si no, nuevo.
       const enc = filtrar(lista, input.value);
       const exacto = lista.find((p) => normalizar(p.nombre) === normalizar(escribir(input.value)));
-      const tomar = enc.length && input.value.trim().length >= 2 && (enterPrimera || enc.length === 1);
+      const tomar = enc.length && (enterPrimera || enc.length === 1);
       confirmar(exacto ? exacto.nombre : (tomar ? enc[0].nombre : input.value));
     });
     pintar();
@@ -148,7 +147,7 @@ export const { listar, registrar, eliminar, elegir } = crearLista({
     titulo: '¿Quién recibe?', placeholder: 'Escriba el nombre…', aria: 'Nombre de quien recibe',
     vacio: 'Escriba el nombre de quien recibe.', mismo: 'Mismo', nuevo: 'Nueva', uso: 'entrega', usos: 'entregas',
     primera: 'Primera vez: escriba el nombre completo. La app lo recordará.',
-    ayuda: 'Escriba las primeras letras o toque un nombre.',
+    ayuda: 'Escriba 3 letras del nombre o apellido.',
     sinCoincidencias: 'No hay nadie con esas letras: se guardará como nuevo.',
   },
 });

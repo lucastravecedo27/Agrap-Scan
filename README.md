@@ -6,14 +6,14 @@ HTML, CSS y JavaScript nativos, sin backend; funciona 100 % offline (IndexedDB +
 | Página | Quién la usa | Qué hace |
 |---|---|---|
 | `index.html` | iPhone fijo en la bodega de la finca | Lobby (escoger finca) → escanear destino y productos, digitar cantidad → Registros: revisar/corregir y enviar el CSV por WhatsApp |
-| `oficina.html` | Computador de la oficina | Productos nuevos, catálogo por bodega, destinos, libro de QR para imprimir y **enviar el catálogo a las fincas** (archivo `catalogo_….json`) |
+| `oficina.html` | Computador de la oficina | Productos nuevos, catálogo por bodega, destinos, **usuarios por finca**, libro de QR para imprimir y **enviar el catálogo a las fincas** (archivo `catalogo_….json`) |
 | `instalar.html` | Quien instala | Pasos para iPhone: Safari → Compartir → Agregar a inicio, cámara, Acceso Guiado |
 
 ## Flujo
 
 1. **Oficina** carga el paquete inicial (`bodegas.csv`, `productos.csv`, `destinos.csv`), imprime el libro de cada bodega y manda `catalogo_….json` por WhatsApp.
-2. **Finca** (encargado): Ajustes › Recibir catálogo de la oficina.
-3. **Operaria**: escoge la finca, pone la página del destino bajo la cámara (si el destino es solo un lote, escoge **la labor**), luego la de cada producto, digita la cantidad y escoge **quién recibe**. Labores y nombres se aprenden: con 2–3 letras se sugieren y quedan bien escritos («CONTROL DE MALEZA AL DIA» → «Control de maleza»).
+2. **Finca** (encargado): Ajustes › Recibir catálogo de la oficina. Si la oficina creó usuarios, cada persona ingresa con usuario y contraseña y solo ve sus fincas; su nombre va como `responsable` en el CSV.
+3. **Operaria**: escoge la finca, pone la página del destino bajo la cámara (si el destino es solo un lote, escoge **la labor**), luego la de cada producto, digita la cantidad y escoge **quién recibe**. Labores y nombres se aprenden: desde la 3.ª letra se sugieren y quedan bien escritos («CONTROL DE MALEZA AL DIA» → «Control de maleza»).
 4. **Fin del día**: Registros › Enviar CSV → revisión editable → menú de compartir (WhatsApp) o descarga.
 
 CSV de salida: `fecha,hora,bodega,despacho_id,finca,lote,labor,codigo_producto,producto,unidad,cantidad,responsable,recibe`

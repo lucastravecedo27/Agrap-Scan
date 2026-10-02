@@ -4,6 +4,7 @@
 import * as db from './db.js';
 import * as catalogo from './catalogo.js';
 import * as bodegas from './bodegas.js';
+import * as usuarios from './usuarios.js';
 import { RE_QR, CMD_CERRAR, CMD_DESHACER, FACTOR_ALERTA } from './config.js';
 import { fechaLocal, horaLocal } from './ui.js';
 
@@ -50,6 +51,7 @@ export async function abrir(bodega, destino) {
   let cerrado = null;
   if (previo) cerrado = await cerrar(bodega);
   const ahora = new Date();
+  const quien = (await usuarios.sesion())?.nombre;
   const despacho = await db.tx(['bodegas', 'despachos', 'ajustes'], 'readwrite', async (s) => {
     const b = await db.prom(s.bodegas.get(bodega));
     if (!b) throw new Error('Bodega no encontrada');
@@ -58,7 +60,7 @@ export async function abrir(bodega, destino) {
     const d = {
       id: idDespacho(bodega, b.consecutivo), bodega, numero: b.consecutivo,
       destino: destino.codigo, finca: destino.finca, lote: destino.lote, labor: destino.labor,
-      responsable: b.responsable || '',
+      responsable: quien || b.responsable || '',
       abierto: true, inicio: ahora.toISOString(), fin: null, fecha: fechaLocal(ahora),
     };
     s.despachos.put(d);
@@ -106,7 +108,7 @@ export async function agregarLinea(despacho, producto, cantidad, recibe = '') {
     codigo: producto.codigo, producto: producto.nombre, unidad: producto.unidad,
     cantidad: Math.round(cantidad * 1000) / 1000,
     finca: despacho.finca, lote: despacho.lote, labor: despacho.labor,
-    responsable: b?.responsable || despacho.responsable || '',
+    responsable: despacho.responsable || b?.responsable || '',
     recibe,
     exportado: 0, exportadoEn: null,
   };
