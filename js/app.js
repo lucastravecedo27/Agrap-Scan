@@ -179,7 +179,7 @@ async function iniciar() {
   }
   fijarSonido(await db.ajuste('sonido', true));
   const pre = await catalogo.precargarSiHaceFalta();
-  if (pre) aviso(pre.origen === 'ejemplo' ? 'Se cargó un catálogo de EJEMPLO.' : `Datos iniciales cargados: ${pre.bodegas} bodegas, ${pre.productos} productos.`, 'info', 6000);
+  if (pre) aviso(`Catálogo de DON GASPAR listo: ${pre.productos} productos y ${pre.destinos} destinos.${pre.pruebasBorradas ? ' Las pruebas se borraron.' : ''}`, 'info', 6000);
 
   const cambio = () => refrescarCabecera();
   if (MODO === 'finca') {

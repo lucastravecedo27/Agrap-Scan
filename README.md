@@ -43,7 +43,7 @@ En `localhost` el service worker usa la red primero. Al publicar cambios, subir 
 en `js/config.js` **y** en `sw.js`: los teléfonos se actualizan solos.
 
 `datos-iniciales/` trae el catálogo real publicado (hoy: B01 Don Gaspar, 547 productos y
-17 destinos). Un equipo nuevo o que solo tenga el `ejemplo/` lo carga solo al abrir la app.
+17 destinos). Un equipo nuevo lo carga solo al abrir la app y queda guardado para usarlo sin internet.
 Usuarios y contraseñas nunca van aquí: viajan en el catálogo que manda la oficina.
 `Materiales/` sigue fuera del repositorio.
 

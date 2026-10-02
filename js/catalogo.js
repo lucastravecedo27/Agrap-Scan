@@ -200,11 +200,11 @@ export async function analizarPaquete({ bodegasCsv, productosCsv, destinosCsv })
   return resumen;
 }
 
-/** Elimina por completo una bodega con su catálogo y sus registros (datos de ejemplo). */
+/** Elimina por completo una bodega con su catálogo y sus registros (datos de ejemplo y pruebas). */
 export async function eliminarBodegaCompleta(codigo) {
-  await db.tx(['bodegas', 'productos', 'destinos', 'despachos', 'lineas', 'ajustes'], 'readwrite', async (s) => {
+  await db.tx(['bodegas', 'productos', 'destinos', 'despachos', 'lineas', 'jornadas', 'ajustes'], 'readwrite', async (s) => {
     s.bodegas.delete(codigo);
-    for (const st of ['productos', 'destinos', 'despachos', 'lineas']) {
+    for (const st of ['productos', 'destinos', 'despachos', 'lineas', 'jornadas']) {
       const claves = await db.prom(s[st].index('bodega').getAllKeys(codigo));
       claves.forEach((k) => s[st].delete(k));
     }
@@ -262,37 +262,17 @@ export async function cargarPublicado() {
 }
 
 /**
- * La primera vez que se abre la app: carga ./datos-iniciales (catálogo real publicado)
- * y si no está, ./ejemplo. Un equipo que solo tiene el ejemplo, sin salidas registradas,
- * lo cambia por los datos reales en cuanto aparecen.
+ * Al abrir la app: si no hay fincas o hay de EJEMPLO, carga ./datos-iniciales (catálogo real
+ * publicado, guardado también para usar sin internet).
  */
 export async function precargarSiHaceFalta() {
-  // Con salidas ya registradas no se reemplaza solo: se borrarían. Ahí se carga a mano.
-  const soloEjemplo = (await db.ajuste('origenDatos')) === 'ejemplo' && (await bodegas.listar()).every((b) => b.ejemplo)
-    && (await db.contar('lineas')) === 0;
-  if ((await db.ajuste('inicializado', false)) && !soloEjemplo) return null;
-  if ((await db.contar('bodegas')) > 0 && !soloEjemplo) { await db.fijarAjuste('inicializado', true); return null; }
-  for (const [carpeta, ejemplo] of [['datos-iniciales', false], ...(soloEjemplo ? [] : [['ejemplo', true]])]) {
-    try {
-      const leer = async (n) => {
-        const r = await fetch(`${carpeta}/${n}`, { cache: 'no-store' });
-        if (!r.ok) throw new Error(n);
-        const t = await r.text();
-        if (/^\s*</.test(t)) throw new Error('no es CSV'); // página 404 servida como HTML
-        return t;
-      };
-      const [bodegasCsv, productosCsv, destinosCsv] = await Promise.all(['bodegas.csv', 'productos.csv', 'destinos.csv'].map(leer));
-      const resumen = await analizarPaquete({ bodegasCsv, productosCsv, destinosCsv });
-      if (!resumen.bodegas.length) continue;
-      const r = await guardarPaquete(resumen, { reemplazarEjemplo: soloEjemplo });
-      if (ejemplo) for (const b of resumen.bodegas) { const x = await bodegas.obtener(b.codigo); x.ejemplo = true; await db.put('bodegas', x); }
-      await db.fijarAjuste('origenDatos', ejemplo ? 'ejemplo' : 'iniciales');
-      await db.fijarAjuste('inicializado', true);
-      return { ...r, origen: ejemplo ? 'ejemplo' : 'iniciales' };
-    } catch { /* probar la siguiente carpeta */ }
-  }
-  await db.fijarAjuste('inicializado', true);
-  return null;
+  // Las fincas de EJEMPLO (y sus pruebas) se reemplazan siempre por el catálogo real.
+  const hayEjemplo = (await bodegas.listar()).some((b) => b.ejemplo);
+  if (!hayEjemplo && (await db.contar('bodegas')) > 0) { await db.fijarAjuste('inicializado', true); return null; }
+  try {
+    const r = await cargarPublicado();
+    return { ...r, origen: 'iniciales', pruebasBorradas: hayEjemplo };
+  } catch { return null; } // sin internet ni copia guardada: se intenta en la próxima apertura
 }
 
 // ---------- Actualización de catálogo: oficina → finca ----------

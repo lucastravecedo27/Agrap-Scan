@@ -1,7 +1,7 @@
 // Service worker: todo en caché para uso 100 % offline.
 // Al publicar cambios, subir VERSION (igual que js/config.js): el navegador detecta que
 // este archivo cambió, instala la caché nueva, toma el control y la app se recarga sola.
-const VERSION = '1.9.3';
+const VERSION = '2.0.0';
 const CACHE = `agrap-salidas-${VERSION}`;
 const ARCHIVOS = [
   './', './index.html', './oficina.html', './instalar.html', './manifest.json',
@@ -13,7 +13,7 @@ const ARCHIVOS = [
   './fuentes/outfit-400.woff2', './fuentes/outfit-600.woff2', './fuentes/outfit-700.woff2',
   './iconos/icono-192.png', './iconos/icono-512.png', './iconos/icono-maskable-512.png',
   './iconos/apple-touch-icon.png', './iconos/simbolo-crema.svg',
-  './ejemplo/bodegas.csv', './ejemplo/productos.csv', './ejemplo/destinos.csv',
+  './datos-iniciales/bodegas.csv', './datos-iniciales/productos.csv', './datos-iniciales/destinos.csv',
 ];
 
 self.addEventListener('install', (e) => {
@@ -29,8 +29,14 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
-  // datos-iniciales solo existe al servir la app en local: siempre a la red.
-  if (req.url.includes('/datos-iniciales/')) return;
+  // Catálogo publicado: primero la red (puede haber cambios), sin internet el guardado.
+  if (req.url.includes('/datos-iniciales/')) {
+    e.respondWith(fetch(req, { cache: 'no-store' }).then((resp) => {
+      if (resp.ok) { const copia = resp.clone(); caches.open(CACHE).then((c) => c.put(req.url.split('?')[0], copia)); }
+      return resp;
+    }).catch(() => caches.match(req, { ignoreSearch: true })));
+    return;
+  }
   // En desarrollo (localhost) primero la red, para ver los cambios sin subir VERSION.
   if (['localhost', '127.0.0.1'].includes(location.hostname)) {
     e.respondWith(fetch(req, { cache: 'no-store' }).catch(() => caches.match(req, { ignoreSearch: true })));
