@@ -71,7 +71,7 @@ export async function construir({ bodega: cod, alcance = 'todo', categoria = nul
           h('div.qr', { html: svgQR(qrDestino(cod, d.codigo)) }),
           h('div.celda-nombre', d.finca),
           h('div.celda-linea', `Lote: ${d.lote}`),
-          h('div.celda-linea.fuerte', d.labor),
+          h('div.celda-linea.fuerte', d.labor || 'Labor: al escanear'),
           h('div.qr-texto', qrDestino(cod, d.codigo)))))));
     });
   }

@@ -4,6 +4,8 @@
 import * as despacho from './despacho.js';
 import * as bodegas from './bodegas.js';
 import * as personas from './personas.js';
+import * as labores from './labores.js';
+import * as db from './db.js';
 import { Escaner, mantenerPantalla } from './scanner.js';
 import {
   $, h, vaciar, num, aviso, confirmar, dialogo, tecladoNumerico,
@@ -175,7 +177,17 @@ export async function procesar(texto) {
           mostrarMensaje(`El despacho ${actual.id} ya está abierto para este destino.`, 'ok');
           break;
         }
-        const { despacho: nuevo, cerrado } = await despacho.abrir(bod, r.registro);
+        // Destino solo con lote: la labor se escoge aquí (la última del lote sale de primera).
+        let destino = r.registro;
+        if (!destino.labor) {
+          sonidoOk();
+          const clave = `laborLote:${bod}|${destino.codigo}`;
+          const labor = await labores.elegir(bod, { subtitulo: `${destino.finca} · ${destino.lote}`, sugerida: await db.ajuste(clave, '') });
+          if (!labor) { mostrarMensaje('Despacho no abierto: falta la labor.', ''); break; }
+          await db.fijarAjuste(clave, labor);
+          destino = { ...destino, labor };
+        }
+        const { despacho: nuevo, cerrado } = await despacho.abrir(bod, destino);
         sonidoOk();
         mostrarMensaje(`${cerrado && !cerrado.eliminado ? `Cerrado ${cerrado.id}. ` : ''}Abierto ${nuevo.id} → ${nuevo.finca} · ${nuevo.labor}`, 'ok');
         break;

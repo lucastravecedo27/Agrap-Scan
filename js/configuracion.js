@@ -5,6 +5,7 @@ import * as db from './db.js';
 import * as bodegas from './bodegas.js';
 import * as catalogo from './catalogo.js';
 import * as personas from './personas.js';
+import * as labores from './labores.js';
 import { VERSION, COLUMNAS_PRODUCTOS, COLUMNAS_DESTINOS } from './config.js';
 import {
   h, vaciar, num, aviso, confirmar, dialogo, formulario, informar, pedirPin,
@@ -53,7 +54,8 @@ async function pintarFinca() {
     h('p', recibido ? `Último catálogo recibido: ${new Date(recibido).toLocaleString('es-CO')}` : 'Todavía no se ha recibido catálogo de la oficina.'),
     h('ul.resumen', resumen),
     h('button.btn.primario.btn-grande', { type: 'button', onclick: recibirCatalogo }, '⇩ Recibir catálogo de la oficina')));
-  raiz.append(await seccionPersonas());
+  raiz.append(await seccionAprendidos(personas, 'Personas que reciben', 'Nombre', 'Entregas', 'Todavía no hay nombres.'));
+  raiz.append(await seccionAprendidos(labores, 'Labores', 'Labor', 'Despachos', 'Todavía no se ha escrito ninguna labor nueva.'));
   const sonido = await db.ajuste('sonido', true);
   const probar = (fn) => () => { desbloquearAudio(); fijarSonido(true); fn(); fijarSonido(chkSonido.checked); };
   const chkSonido = h('input', { type: 'checkbox', checked: sonido, onchange: async (e) => { await db.fijarAjuste('sonido', e.target.checked); fijarSonido(e.target.checked); aviso('Guardado', 'ok'); } });
@@ -68,22 +70,22 @@ async function pintarFinca() {
   raiz.append(await seccionAjustes());
 }
 
-async function seccionPersonas() {
+async function seccionAprendidos(lista_, titulo, columna, conteo, vacio) {
   const bod = await bodegas.bodegaActiva();
-  const lista = bod ? await personas.listar(bod) : [];
+  const lista = bod ? await lista_.listar(bod, { soloAprendidos: true }) : [];
   return h('section.tarjeta',
-    h('h2', `Personas que reciben${bod ? ` · ${bod}` : ''}`),
+    h('h2', `${titulo}${bod ? ` · ${bod}` : ''}`),
     h('p.nota', 'La app las aprende sola al escribirlas en cada despacho. Borre aquí las que quedaron mal escritas.'),
     lista.length ? h('div.tabla-scroll.corta', h('table.tabla',
-      h('thead', h('tr', h('th', 'Nombre'), h('th.num', 'Entregas'), h('th', ''))),
+      h('thead', h('tr', h('th', columna), h('th.num', conteo), h('th', ''))),
       h('tbody', lista.map((p) => h('tr', h('td', p.nombre), h('td.num', p.usos),
         h('td.acciones-celda', h('button.btn.mini', {
           type: 'button',
           onclick: async () => {
-            if (!(await confirmar('¿Borrar nombre?', `«${p.nombre}» deja de salir en las sugerencias. Los registros ya hechos no cambian.`, { si: 'Borrar', peligro: true }))) return;
-            await personas.eliminar(bod, p.nombre); pintarFinca();
+            if (!(await confirmar('¿Borrar?', `«${p.nombre}» deja de salir en las sugerencias. Los registros ya hechos no cambian.`, { si: 'Borrar', peligro: true }))) return;
+            await lista_.eliminar(bod, p.nombre); pintarFinca();
           },
-        }, 'Borrar'))))))) : h('p.vacio', 'Todavía no hay nombres.'));
+        }, 'Borrar'))))))) : h('p.vacio', vacio));
 }
 
 async function recibirCatalogo() {
@@ -358,7 +360,7 @@ async function tablaDestinos(cod) {
     h('div.tabla-scroll', h('table.tabla',
       h('thead', h('tr', h('th', 'Código'), h('th', 'Finca'), h('th', 'Lote'), h('th', 'Labor'), h('th', ''))),
       h('tbody', todos.map((d) => h('tr', { class: d.activo === false ? 'inactivo' : '' },
-        h('td', d.codigo), h('td', d.finca), h('td', d.lote), h('td', d.labor),
+        h('td', d.codigo), h('td', d.finca), h('td', d.lote), h('td', d.labor || '— se escoge al escanear'),
         h('td.acciones-celda',
           h('button.btn.mini', { type: 'button', onclick: () => editarDestino(cod, d) }, 'Editar'),
           h('button.btn.mini', { type: 'button', onclick: async () => { await catalogo.guardarDestino(cod, { ...d, activo: d.activo === false }); pintar(); } }, d.activo === false ? 'Activar' : 'Desactivar'))))))));
@@ -370,7 +372,7 @@ async function editarDestino(cod, d) {
     { nombre: 'codigo', etiqueta: 'Código', valor: d?.codigo || await catalogo.siguienteCodigoDestino(cod), soloLectura: !!d, requerido: true },
     { nombre: 'finca', etiqueta: 'Finca', valor: d?.finca || b?.finca, requerido: true },
     { nombre: 'lote', etiqueta: 'Lote', valor: d?.lote, requerido: true },
-    { nombre: 'labor', etiqueta: 'Labor', valor: d?.labor, requerido: true },
+    { nombre: 'labor', etiqueta: 'Labor (vacía: se escoge al escanear)', valor: d?.labor },
   ]);
   if (!v) return;
   try { await catalogo.guardarDestino(cod, { ...d, ...v }, { nuevo: !d }); aviso('Destino guardado', 'ok'); pintar(); } catch (e) { aviso(e.message, 'error'); }
@@ -378,7 +380,7 @@ async function editarDestino(cod, d) {
 
 function plantilla(tipo, cod) {
   const cols = tipo === 'productos' ? COLUMNAS_PRODUCTOS : COLUMNAS_DESTINOS;
-  const ej = tipo === 'productos' ? '0045,GUANTE NITRILO,Und.,Elementos de protección personal,10,' : '001,DON GASPAR,LOTE 1,Fertilización';
+  const ej = tipo === 'productos' ? '0045,GUANTE NITRILO,Und.,Elementos de protección personal,10,' : '001,DON GASPAR,LOTE 1,';
   descargar(`plantilla_${tipo}_${cod}.csv`, `${cols.join(',')}\r\n${ej}\r\n`);
 }
 

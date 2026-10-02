@@ -13,7 +13,7 @@ HTML, CSS y JavaScript nativos, sin backend; funciona 100 % offline (IndexedDB +
 
 1. **Oficina** carga el paquete inicial (`bodegas.csv`, `productos.csv`, `destinos.csv`), imprime el libro de cada bodega y manda `catalogo_….json` por WhatsApp.
 2. **Finca** (encargado): Ajustes › Recibir catálogo de la oficina.
-3. **Operaria**: escoge la finca, pone la página del destino bajo la cámara, luego la de cada producto, digita la cantidad y escoge **quién recibe** (la app aprende los nombres: con 2–3 letras los sugiere).
+3. **Operaria**: escoge la finca, pone la página del destino bajo la cámara (si el destino es solo un lote, escoge **la labor**), luego la de cada producto, digita la cantidad y escoge **quién recibe**. Labores y nombres se aprenden: con 2–3 letras se sugieren y quedan bien escritos («CONTROL DE MALEZA AL DIA» → «Control de maleza»).
 4. **Fin del día**: Registros › Enviar CSV → revisión editable → menú de compartir (WhatsApp) o descarga.
 
 CSV de salida: `fecha,hora,bodega,despacho_id,finca,lote,labor,codigo_producto,producto,unidad,cantidad,responsable,recibe`
@@ -21,7 +21,7 @@ CSV de salida: `fecha,hora,bodega,despacho_id,finca,lote,labor,codigo_producto,p
 
 ## Códigos QR
 
-`B01-DST-003` destino · `B01-INS-0045` producto (el código de WorldOffice tal cual) · `CMD-CERRAR` · `CMD-DESHACER`.
+`B01-DST-003` destino (lote; la labor es opcional: vacía se escoge al escanear) · `B01-INS-0045` producto (el código de WorldOffice tal cual) · `CMD-CERRAR` · `CMD-DESHACER`.
 
 ## Desarrollo
 

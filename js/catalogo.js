@@ -3,6 +3,7 @@
 
 import * as db from './db.js';
 import * as bodegas from './bodegas.js';
+import * as labores from './labores.js';
 import { aObjetos } from './csv.js';
 import { RE_BODEGA, MIN_LINEAS_HISTORIAL } from './config.js';
 
@@ -69,7 +70,7 @@ function validarDestino(r, bodega) {
   const d = {
     id: '', bodega,
     codigo: codigoCorto(r.codigo, bodega, 'DST'),
-    finca: limpiar(r.finca), lote: limpiar(r.lote), labor: limpiar(r.labor),
+    finca: limpiar(r.finca), lote: limpiar(r.lote), labor: limpiar(r.labor) ? labores.escribir(limpiar(r.labor)) : '',
     activo: true,
   };
   const errores = [];
@@ -77,7 +78,6 @@ function validarDestino(r, bodega) {
   else if (d.codigo.length > 20 || /[\r\n]/.test(d.codigo)) errores.push('código con formato inválido');
   if (!d.finca) errores.push('finca vacía');
   if (!d.lote) errores.push('lote vacío');
-  if (!d.labor) errores.push('labor vacía');
   d.id = `${bodega}|${d.codigo}`;
   return { registro: d, errores };
 }
@@ -90,7 +90,7 @@ function validarDestino(r, bodega) {
  */
 export async function analizarCsv(texto, tipo, bodega = null) {
   const { columnas, registros } = aObjetos(texto);
-  const requeridas = tipo === 'productos' ? ['codigo', 'nombre', 'unidad', 'categoria'] : ['codigo', 'finca', 'lote', 'labor'];
+  const requeridas = tipo === 'productos' ? ['codigo', 'nombre', 'unidad', 'categoria'] : ['codigo', 'finca', 'lote'];
   const columnasFaltantes = requeridas.filter((c) => !columnas.includes(c));
   if (!bodega && !columnas.includes('bodega')) columnasFaltantes.push('bodega');
   const res = { validos: [], errores: [], nuevos: 0, actualizados: 0, columnasFaltantes, total: registros.length, otrasBodegas: 0 };
