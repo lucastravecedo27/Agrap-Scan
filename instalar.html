@@ -30,12 +30,13 @@
 <body>
   <header class="portada">
     <h1>Instalar Agrap Scan</h1>
-    <p>En el teléfono de la estación de bodega · iPhone (iOS 17+) o Android (Chrome)</p>
+    <p>En el teléfono de la estación de bodega · iPhone (iOS 17+), Android (Chrome) o el portátil de la finca</p>
   </header>
   <main class="contenido">
     <div class="sistemas" role="group" aria-label="Sistema del teléfono">
       <button type="button" data-sistema="iphone" aria-pressed="true">iPhone</button>
       <button type="button" data-sistema="android" aria-pressed="false">Android</button>
+      <button type="button" data-sistema="pc" aria-pressed="false">Portátil</button>
     </div>
     <ol class="pasos" data-sistema="iphone">
       <li>
@@ -121,6 +122,30 @@
         <p>Al final del día: <em>Registros › Enviar CSV</em>, revise las cantidades y escoja WhatsApp.</p>
       </li>
     </ol>
+    <ol class="pasos" data-sistema="pc" hidden>
+      <li>
+        <h2>Google Drive en el portátil</h2>
+        <p>Instale <strong>Google Drive para escritorio</strong> e ingrese con la cuenta que tiene compartida la carpeta que vigila Materiales en la oficina (hoy <em>Facturas Grupo Travecedo</em>). Debe aparecer en el Explorador de archivos (unidad <em>G:</em> o <em>Google Drive</em>).</p>
+      </li>
+      <li>
+        <h2>Abrir en Chrome o Edge</h2>
+        <p>Abra esta misma dirección en <strong>Chrome</strong> o <strong>Edge</strong> (en otros navegadores no se puede guardar solo). Para instalarla: el ícono <span class="tecla-ios">⊕</span> a la derecha de la barra de direcciones › <span class="tecla-ios">Instalar</span>. Desde ahora ábrala desde el ícono del escritorio: funciona sin internet.</p>
+      </li>
+      <li>
+        <h2>Escoger la finca</h2>
+        <p>Toque la finca (por ejemplo <strong>LA ALEGRIA</strong>). Pide el PIN de encargado: el inicial es <strong>1234</strong> y la app obliga a cambiarlo.</p>
+      </li>
+      <li>
+        <h2>Guardar solo en la carpeta de Materiales</h2>
+        <p><em>Registros › Excel para Materiales › 📁 Guardar solo en la carpeta de Materiales…</em> Busque la carpeta de Drive de Materiales y guarde con el nombre que propone (<em>Salidas LA ALEGRIA (Agrap Scan).xlsx</em>). Si el navegador pregunta, escoja <span class="tecla-ios">Permitir en cada visita</span>.</p>
+        <p>Desde ahí cada salida queda en ese Excel a los pocos segundos, sin enviar nada. Arriba a la derecha se ve <em>📗 Materiales ✓</em> con la hora del último guardado. Si dice <em>🔗 Reconectar</em>, tóquelo y dé permiso.</p>
+      </li>
+      <li>
+        <h2>Registrar una salida</h2>
+        <p>Escriba 3 letras del material, Enter, la cantidad con el teclado, Enter, y quién recibe (3 letras del nombre o el carné frente a la cámara del portátil), Enter.</p>
+        <p>Lo que la oficina contabiliza en Materiales vuelve marcado (<em>WO 493 · fecha</em>) y ya no se puede cambiar. Lo demás se corrige en <em>Registros</em>.</p>
+      </li>
+    </ol>
     <div class="abrir"><a class="btn primario" href="./">Abrir Agrap Scan</a></div>
   </main>
   <script>
@@ -131,6 +156,7 @@
     };
     document.querySelectorAll('.sistemas button').forEach((b) => b.addEventListener('click', () => mostrar(b.dataset.sistema)));
     if (/android/i.test(navigator.userAgent)) mostrar('android');
+    else if (/Windows|Macintosh|Linux|CrOS/.test(navigator.userAgent) && !('ontouchend' in document)) mostrar('pc');
   </script>
 </body>
 </html>

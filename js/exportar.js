@@ -118,7 +118,7 @@ export async function revisar(lineas, titulo) {
       ls.map((l) => {
         const input = h('input.revision-cant', { type: 'text', inputmode: 'decimal', value: num(l.cantidad).replace(/\./g, ''), disabled: !!l.exportado, 'aria-label': `Cantidad de ${l.producto}` });
         const fila = h('div.revision-linea', { class: l.exportado ? 'exportada' : '' },
-          h('div.revision-prod', h('div', l.producto), h('small', `${l.codigo} · ${l.fecha} ${l.hora.slice(0, 5)}${l.recibe ? ` · recibe ${l.recibe}` : ''}${l.exportado ? ' · ya exportada' : ''}${l.cantidadOriginal != null ? ` · antes ${num(l.cantidadOriginal)}` : ''}`)),
+          h('div.revision-prod', h('div', l.producto), h('small', `${l.codigo} · ${l.fecha} ${l.hora.slice(0, 5)}${l.recibe ? ` · recibe ${l.recibe}` : ''}${l.sello ? ` · ${l.sello}` : l.exportado ? ' · ya exportada' : ''}${l.cantidadOriginal != null ? ` · antes ${num(l.cantidadOriginal)}` : ''}`)),
           h('div.revision-edit', input, h('span.revision-und', l.unidad)),
           l.exportado ? h('span') : h('button.btn.mini.quitar', {
             type: 'button', 'aria-label': `Quitar ${l.producto}`,
@@ -219,13 +219,51 @@ async function tarjetaMateriales(bodega) {
       alCambio(); pintar();
     } catch (e) { aviso(e.message, 'error', 7000); }
   };
+  const pc = materiales.puedeGuardarSolo() ? await bloqueGuardarSolo(bodega, listo) : null;
+  const auto = pc?.dataset.activo === '1';
   return h('section.tarjeta.tarjeta-materiales',
     h('h2', '📗 Excel para Materiales'),
-    h('p.nota', 'Reemplaza el cuaderno de salidas que se digitaba a mano. La encargada lo guarda en lugar del cuaderno de la finca (mismo nombre) y Materiales lo procesa como siempre. Trae los últimos 45 días: lo ya contabilizado Materiales lo salta solo.'),
+    h('p.nota', 'Reemplaza el cuaderno de salidas que se digitaba a mano. Materiales lo procesa como siempre y saca el archivo plano de WorldOffice. Trae los últimos 45 días: lo ya contabilizado Materiales lo salta solo.'),
     listo ? null : h('p.correo-cola', 'Falta el ID del cuaderno de esta finca en Materiales: la oficina lo pone en Oficina › Bodegas y envía el catálogo.'),
-    h('div.fila-botones',
+    pc,
+    auto ? null : h('div.fila-botones',
       h('button.btn.primario.btn-grande', { type: 'button', disabled: !listo, onclick: () => correr('compartir') }, 'Enviar a la encargada (WhatsApp…)'),
       h('button.btn.secundario.btn-grande', { type: 'button', disabled: !listo, onclick: () => correr('descargar') }, '↓ Descargar Excel')));
+}
+
+/** PC (Chrome/Edge): el cuaderno se guarda solo en la carpeta de Drive que vigila Materiales. */
+async function bloqueGuardarSolo(bodega, listo) {
+  const arch = await materiales.archivoDe(bodega);
+  const perm = await materiales.permiso(bodega);
+  const accion = (fn, ok) => async () => {
+    try { const r = await fn(); if (r && ok) aviso(ok, 'ok', 5000); } catch (e) { aviso(e.message, 'error', 9000); }
+    alCambio(); pintar();
+  };
+  const elegir = accion(() => materiales.elegirArchivo(bodega), 'Listo: desde ahora cada salida se guarda sola en ese archivo.');
+  if (!arch) {
+    return h('div.materiales-auto', { dataset: { activo: '0' } },
+      h('p', h('strong', 'En este computador se puede guardar solo. '),
+        'Escoja una vez la carpeta de Google Drive que vigila Materiales en la oficina (la de las facturas). Desde ahí cada salida queda en ese Excel sin enviar nada, y lo que la oficina contabiliza aparece aquí marcado.'),
+      h('button.btn.primario.btn-grande', { type: 'button', disabled: !listo, onclick: elegir }, '📁 Guardar solo en la carpeta de Materiales…'));
+  }
+  const cuando = arch.ultima ? new Date(arch.ultima).toLocaleString('es-CO', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : 'todavía no';
+  return h('div.materiales-auto', { dataset: { activo: '1' } },
+    h('p', '📁 ', h('strong', arch.nombre), ` · guardado ${cuando}`),
+    arch.ultima ? h('p.nota', `${arch.lineas || 0} salida(s) en el archivo · ${arch.contabilizadas || 0} ya contabilizada(s) en WorldOffice${arch.avisos ? ` · ⚠ ${arch.avisos} con aviso de Materiales (ábralo para leerlo)` : ''}.`) : null,
+    perm !== 'granted' ? h('p.correo-cola', 'El navegador pide permiso otra vez para escribir en ese archivo.') : null,
+    arch.error ? h('p.correo-cola', `⚠ ${arch.error}`) : null,
+    h('div.fila-botones',
+      perm !== 'granted'
+        ? h('button.btn.primario.btn-grande', { type: 'button', onclick: accion(() => materiales.reconectar(bodega), 'Conectado.') }, '🔗 Dar permiso')
+        : h('button.btn.primario', { type: 'button', onclick: accion(() => materiales.sincronizar(bodega), 'Guardado en la carpeta de Materiales.') }, '↻ Guardar ahora'),
+      h('button.btn.secundario', { type: 'button', onclick: elegir }, 'Cambiar archivo…'),
+      h('button.btn.secundario', {
+        type: 'button',
+        onclick: async () => {
+          if (!(await confirmar('Dejar de guardar solo', 'Las salidas ya no llegarán solas a Materiales; habría que enviar el Excel a mano. El archivo no se borra.', { si: 'Dejar de guardar' }))) return;
+          await materiales.olvidarArchivo(bodega); alCambio(); pintar();
+        },
+      }, 'Dejar de guardar solo')));
 }
 
 // ---------- Pantalla Registros ----------
@@ -253,6 +291,8 @@ async function pintar() {
   const tCorreo = activa ? await correo.tarjeta(activa, () => { alCambio(); pintar(); }) : null;
   if (tCorreo) raiz.append(tCorreo);
   if (activa) raiz.append(await tarjetaMateriales(activa));
+  // PC que guarda solo: lo pendiente ya está en el archivo de Materiales (se cierra con el sello).
+  const auto = activa && estado.alcance === activa && (await materiales.permiso(activa)) === 'granted';
 
   // --- Exportar ---
   const desde = h('input', { type: 'date', value: estado.fecha });
@@ -268,7 +308,8 @@ async function pintar() {
     h('h2', 'Exportar a Agrap'),
     h('p.nota', '«Enviar» abre el menú de compartir del iPhone: escoja WhatsApp y el contacto del encargado. «Descargar» guarda el archivo en Archivos.'),
     pend.total
-      ? h('p.pendientes-texto', `${pend.total} línea(s) sin exportar${pend.antiguas ? ` · ${pend.antiguas} de días anteriores (${pend.dias.join(', ')})` : ''}.`)
+      ? (auto ? h('p.pendientes-texto.ok', `${pend.total} línea(s) ya en el archivo de Materiales, esperando que la oficina las contabilice.`)
+        : h('p.pendientes-texto', `${pend.total} línea(s) sin exportar${pend.antiguas ? ` · ${pend.antiguas} de días anteriores (${pend.dias.join(', ')})` : ''}.`))
       : h('p.pendientes-texto.ok', 'Todo exportado.'),
     h('label.campo', h('span', 'Qué exportar'), alcanceExp),
     h('div.fila-botones',
@@ -328,7 +369,7 @@ async function pintar() {
         h('tbody', totales.map((t) => h('tr', h('td', t.codigo), h('td', t.producto), h('td.num', num(t.cantidad)), h('td', t.unidad))))),
       h('h4', 'Líneas'),
       h('table.tabla', h('thead', h('tr', h('th', 'Hora'), h('th', 'Producto'), h('th.num', 'Cant.'), h('th', 'Recibe'), h('th', 'Estado'))),
-        h('tbody', lineas.map((l) => h('tr', h('td', l.hora.slice(0, 5)), h('td', l.producto), h('td.num', `${num(l.cantidad)} ${l.unidad}`), h('td', l.recibe || '—'), h('td', l.exportado ? 'Exportada' : 'Pendiente'))))),
+        h('tbody', lineas.map((l) => h('tr', h('td', l.hora.slice(0, 5)), h('td', l.producto), h('td.num', `${num(l.cantidad)} ${l.unidad}`), h('td', l.recibe || '—'), h('td', l.sello || (l.exportado ? 'Exportada' : 'Pendiente')))))),
       lineas.some((l) => !l.exportado) ? h('button.btn.secundario', {
         type: 'button',
         onclick: async () => {

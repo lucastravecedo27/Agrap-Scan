@@ -14,6 +14,7 @@ import * as usuarios from './usuarios.js';
 import * as jornada from './jornada.js';
 import * as modo from './modo.js';
 import * as correo from './correo.js';
+import * as materiales from './materiales.js';
 import { $, $$, h, vaciar, aviso, confirmar, desbloquearAudio, fijarSonido } from './ui.js';
 
 const MODO = document.body.dataset.modo === 'oficina' ? 'oficina' : 'finca';
@@ -53,9 +54,36 @@ async function refrescarCabecera() {
   const banda = $('#bandaPendientes');
   const listo = b ? await correo.listoParaAutorizar(b.codigo) : null;
   banda.hidden = !p.antiguas && !listo;
+  banda.dataset.accion = '';
   banda.textContent = listo
     ? `📧 Cierre del día listo para autorizar (${listo.total} registro(s)). Vaya a ${m === 'personal' ? 'Jornada' : 'Registros'} › Revisar y autorizar envío.`
     : p.antiguas ? `⚠ Hay ${p.antiguas} línea(s) sin exportar de días anteriores (${p.dias.join(', ')}). Vaya a Registros › Enviar CSV.` : '';
+  // PC que guarda solo en la carpeta de Materiales: lo pendiente ya está en manos de la oficina
+  // (se cierra cuando Materiales lo sella). Lo que importa aquí es que el guardado siga vivo.
+  const arch = m === 'salidas' && b ? await materiales.archivoDe(b.codigo) : null;
+  if (arch) {
+    const perm = await materiales.permiso(b.codigo);
+    const hora = arch.ultima ? new Date(arch.ultima).toLocaleTimeString('es-CO', { hour: 'numeric', minute: '2-digit' }) : '—';
+    ind.hidden = false;
+    ind.textContent = perm !== 'granted' ? '🔗 Reconectar Materiales' : arch.error ? '⚠ Materiales' : `📗 Materiales ✓ ${hora}`;
+    ind.classList.toggle('alerta-dias', perm !== 'granted' || !!arch.error);
+    banda.hidden = !!listo || (perm === 'granted' && !arch.error);
+    if (!listo && perm !== 'granted') {
+      banda.dataset.accion = 'reconectar';
+      banda.textContent = '🔗 Toque aquí para seguir guardando las salidas en la carpeta de Materiales (el navegador pide permiso otra vez).';
+    } else if (!listo && arch.error) {
+      banda.textContent = `⚠ No se pudo guardar en la carpeta de Materiales: ${arch.error}`;
+    }
+  }
+}
+
+async function reconectarMateriales() {
+  const b = await bodegas.bodegaActiva();
+  try {
+    if (b && await materiales.reconectar(b)) aviso('Conectado: las salidas se guardan solas en la carpeta de Materiales.', 'ok', 5000);
+    else aviso('Sin permiso, las salidas no llegan solas a Materiales. Toque otra vez y escoja «Permitir».', 'aviso', 7000);
+  } catch (e) { aviso(e.message, 'error', 8000); }
+  await refrescarCabecera();
 }
 
 // ---------- Lobby (finca) ----------
@@ -200,6 +228,18 @@ async function entrar(clave) {
   await irA('escanear');
 }
 
+/**
+ * PC con archivo de Materiales: se relee cada 5 minutos y al volver a la ventana, para traer
+ * los sellos que pone la oficina al contabilizar (lo sellado queda cerrado aquí).
+ */
+function vigilarMateriales() {
+  if (!materiales.puedeGuardarSolo()) return;
+  const tocar = async () => materiales.programar(await bodegas.bodegaActiva(), 500);
+  tocar();
+  setInterval(tocar, 5 * 60000);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') tocar(); });
+}
+
 async function iniciar() {
   $$('.version-app').forEach((e) => { e.textContent = `v${VERSION}`; });
   try {
@@ -210,9 +250,11 @@ async function iniciar() {
   }
   fijarSonido(await db.ajuste('sonido', true));
   const pre = await catalogo.precargarSiHaceFalta();
-  if (pre) aviso(`Catálogo de DON GASPAR listo: ${pre.productos} productos y ${pre.destinos} destinos.${pre.pruebasBorradas ? ' Las pruebas se borraron.' : ''}`, 'info', 6000);
+  if (pre) aviso(`Catálogo listo: ${pre.bodegas} finca(s), ${pre.productos} productos y ${pre.destinos} destinos.${pre.pruebasBorradas ? ' Las pruebas se borraron.' : ''}`, 'info', 6000);
 
-  const cambio = () => refrescarCabecera();
+  // Tras cada cambio: cabecera al día y, en un PC con archivo escogido, el Excel de Materiales.
+  const cambio = async () => { refrescarCabecera(); if (MODO === 'finca') materiales.programar(await bodegas.bodegaActiva()); };
+  materiales.alSincronizar(() => refrescarCabecera());
   if (MODO === 'finca') {
     escaneo.montar($('[data-pantalla=escanear]'), { alCambiarDatos: cambio });
     exportar.montar($('[data-pantalla=registros]'), { alCambiarDatos: cambio });
@@ -221,7 +263,11 @@ async function iniciar() {
     $('#btnCambiarFinca').addEventListener('click', mostrarLobby);
     $('#btnAtras').addEventListener('click', volverAModos);
     $('#lobbyAjustes').addEventListener('click', async () => { cerrarLobby(); await refrescarCabecera(); await irA('ajustes'); });
-    $('#pendientes').addEventListener('click', () => irA('registros'));
+    $('#pendientes').addEventListener('click', async () => {
+      const b = await bodegas.bodegaActiva();
+      if (b && (await materiales.permiso(b)) === 'prompt') reconectarMateriales(); else irA('registros');
+    });
+    $('#bandaPendientes').addEventListener('click', (e) => { if (e.currentTarget.dataset.accion === 'reconectar') reconectarMateriales(); });
   } else {
     configuracion.montar($('[data-pantalla=catalogo]'), { alCambiarDatos: cambio, modo: 'oficina' });
     configuracion.alImprimirNuevos((bodega) => { libro.preseleccionar({ bodega, alcance: 'nuevos' }); irA('libro'); });
@@ -235,7 +281,7 @@ async function iniciar() {
   // Para pruebas desde la consola: agrap.simular('B01-INS-0045')
   window.agrap = { simular: escaneo.simular, irA, db, VERSION, MODO };
   registrarSW();
-  if (MODO === 'finca') { guardarAtras(); ofrecerInstalacion(); seguirCabecera(); correo.vigilar(); setInterval(refrescarCabecera, 120000); }
+  if (MODO === 'finca') { guardarAtras(); ofrecerInstalacion(); seguirCabecera(); correo.vigilar(); setInterval(refrescarCabecera, 120000); vigilarMateriales(); }
   await refrescarCabecera();
   if (MODO === 'finca') await mostrarLobby(); else await irA('catalogo');
 }

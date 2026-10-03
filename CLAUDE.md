@@ -12,9 +12,20 @@ fincas de banano del grupo. Publicada en GitHub Pages: repo `lucastravecedo27/Ag
 
 Documento del flujo de trabajo (editable): https://claude.ai/code/artifact/054a0e32-79d3-4fcc-b6a1-7e87a216e989
 
-## Estado al 2026-10-03 · v2.9.0
+## Estado al 2026-10-03 · v2.10.0
 
-- **Finca piloto: Don Gaspar (B01).** Catálogo real en `datos-iniciales/` (solo los 3 CSV de B01 se publican).
+- **Fincas piloto: Don Gaspar (B01) y La Alegría (B04, Ficus Indica, en un PORTÁTIL).** El paquete
+  publicado (`datos-iniciales/bodegas|productos|destinos.csv`) lleva solo las piloto, con el ID del
+  cuaderno de Materiales en `bodegas.csv`. Para sumar otra finca:
+  `python3 herramientas/agregar_finca_piloto.py B03` (lee `Materiales/datos/app.db`).
+- **PC: el Excel para Materiales se guarda SOLO** (`materiales.js` › `sincronizar`, File System
+  Access de Chrome/Edge). Registros › «Guardar solo en la carpeta de Materiales…» escoge una vez
+  `Salidas <FINCA> (Agrap Scan).xlsx` dentro de la carpeta de Drive que vigila Materiales
+  (`G:\Mi unidad\Facturas Grupo Travecedo`). Cada cambio lo reescribe; antes lo relee y los
+  renglones que Materiales selló («WO 493 · fecha», casados por la columna «Id Agrap Scan») quedan
+  cerrados en la app. Nunca pisa un cuaderno de otra finca ni uno digitado a mano. Si el navegador
+  pierde el permiso, la cabecera dice «🔗 Reconectar». Probado de punta a punta contra el código
+  real de Materiales: SA 493/494 de Ficus, sellos de vuelta, sin duplicar aunque se pierdan sellos.
 - **Salidas de materiales (lo que se usa):** buscar material con 3 letras → cantidad →
   «¿Quién recibe?» escaneando el CARNÉ del trabajador (la cámara se abre solo ahí) o 3 letras.
 - **Jornada / RDT: APAGADOS, NO BORRADOS.** `FUNCIONES.jornada = false` en `js/config.js`.
@@ -26,8 +37,11 @@ Documento del flujo de trabajo (editable): https://claude.ai/code/artifact/054a0
   huella, archivo plano WorldOffice). Trae los últimos 45 días; lo ya contabilizado se salta
   por huella. Probado contra `core/salidas.py` y `core/exportador_salidas.py`.
   - El ID del cuaderno va en Oficina › Bodegas (campo `cuaderno`) y viaja en el catálogo.
-  - **No modificar Materiales.** La copia en `Materiales/` (y `~/Documents/Materiales`) es VIEJA;
-    la versión de la empresa es más nueva y no está en este Mac. Si hace falta tocarla, pedirla.
+  - **No modificar Materiales.** `Materiales/` es la copia de la EMPRESA (zip del 3 oct 2026, sin
+    PDF ni .venv; trae `datos/app.db` real). La anterior quedó en `Materiales-viejo/` (su `.venv`
+    sirve para correr el código de Materiales en pruebas). Ambas fuera de git.
+  - El archivo plano de WorldOffice lo saca SIEMPRE Materiales (dueño de los consecutivos):
+    la app no genera planos propios para no repartir números.
 - **Correo del cierre:** el teléfono arma el cierre, el encargado lo autoriza con PIN y lo manda
   un Google Apps Script (`herramientas/correo/Codigo.gs`) publicado con la cuenta de AGRAP
   (agritravecedo@gmail.com). Contactos/copia/firma desde Oficina › Correo; bitácora en una hoja
@@ -38,9 +52,11 @@ Documento del flujo de trabajo (editable): https://claude.ai/code/artifact/054a0
 
 ## Pendientes del usuario
 
-1. Poner el ID del cuaderno de Don Gaspar en Oficina › Bodegas (verificar en la hoja «Ficha»
-   del cuaderno actual de la empresa) y enviar el catálogo.
-2. Fecha de corte: desde ese día la finca deja de digitar el cuaderno viejo.
+1. La Alegría: en el portátil instalar Google Drive para escritorio con acceso a la carpeta de
+   Materiales, abrir la app en Chrome/Edge, escoger LA ALEGRIA y «Guardar solo…» (ver instalar.html
+   › Portátil). En la oficina: contabilizar lo pendiente del cuaderno viejo de La Alegría y sacarlo
+   de `datos/salidas` (mismo ID: si quedan los dos, Materiales sigue el de Drive).
+2. Fecha de corte por finca: desde ese día no se digita el cuaderno viejo (si no, se cuenta doble).
 3. Publicar el servicio de correo (`herramientas/correo/LEEME.md`).
 4. Cambiar el PIN 1234 en cada aparato. GitHub con verificación en dos pasos.
 

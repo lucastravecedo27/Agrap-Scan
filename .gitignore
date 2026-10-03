@@ -1,12 +1,14 @@
 # Datos reales: nunca al repositorio
 Materiales/
+Materiales*/
 materiales/
+*.zip
 *.db
 .DS_Store
 node_modules/
 __pycache__/
 
-# De datos-iniciales solo se publica el catálogo de Don Gaspar (lo que carga la app).
+# De datos-iniciales solo se publica el paquete de las fincas piloto (lo que carga la app).
 datos-iniciales/*
 !datos-iniciales/bodegas.csv
 !datos-iniciales/productos.csv

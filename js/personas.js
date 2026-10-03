@@ -153,7 +153,12 @@ export function crearLista({ prefijo, formatear: formatearFn = formatear, base =
         { texto: 'Aceptar', clase: 'primario', valor: () => undefined, antes: async () => { await confirmar(input.value); return false; } },
       ],
       // enlazar(fn): quien abre el diálogo puede escoger desde afuera (el carné leído por la cámara).
-      alAbrir: (caja, c) => { cerrar = c; if (enlazar) enlazar((nombre) => confirmar(nombre)); else setTimeout(() => input.focus(), 60); },
+      alAbrir: (caja, c) => {
+        cerrar = c;
+        if (enlazar) enlazar((nombre) => confirmar(nombre));
+        // En el teléfono el teclado taparía la cámara del carné; en un PC (mouse) se escribe de una.
+        if (!enlazar || matchMedia('(pointer: fine)').matches) setTimeout(() => input.focus(), 60);
+      },
     });
   }
 

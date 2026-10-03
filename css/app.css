@@ -516,3 +516,9 @@ body[data-modo="salidas"] .solo-salidas-bloque { display: block; }
 .material-nombre { font-size: 1.2rem; font-weight: 700; color: var(--azul-profundo); }
 .material-opcion small { color: var(--gris); }
 .tarjeta-materiales { border: 3px solid var(--verde); }
+
+/* PC: guardado automático en la carpeta de Materiales */
+.materiales-auto { border: 1px dashed var(--linea); border-radius: 14px; padding: 12px 14px; margin: 10px 0; }
+.materiales-auto p { margin: 0 0 8px; }
+.materiales-auto[data-activo="1"] { border-style: solid; background: var(--verde-fondo); }
+.banda-pendientes[data-accion="reconectar"] { cursor: pointer; text-decoration: underline; }
