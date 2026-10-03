@@ -7,7 +7,7 @@ import * as personas from './personas.js';
 import * as labores from './labores.js';
 import * as jornada from './jornada.js';
 import * as usuarios from './usuarios.js';
-import { RE_CARNE } from './config.js';
+import { RE_CARNE, qrProducto } from './config.js';
 import * as modo from './modo.js';
 import * as db from './db.js';
 import * as traspaso from './traspaso.js';
@@ -38,6 +38,15 @@ export function montar(contenedor, { alCambiarDatos }) {
       h('button.btn.primario.btn-iniciar#btnIniciar', { type: 'button', onclick: iniciarCamara }, '▶ Iniciar escaneo'),
     ),
     h('div.franja-destino#franja'),
+    // Salidas: el material se busca por nombre (3 letras); la cámara solo se abre para el carné.
+    h('div.buscador-material.solo-salidas-bloque',
+      h('input#buscarMaterial', {
+        type: 'search', placeholder: '🔍 Buscar material (3 letras)…', autocomplete: 'off', autocorrect: 'off',
+        autocapitalize: 'none', spellcheck: false, enterkeyhint: 'search', 'aria-label': 'Buscar material',
+        oninput: () => pintarBusqueda(),
+        onkeydown: (e) => { if (e.key === 'Enter') { e.preventDefault(); $('#resultadosMaterial .material-opcion', raiz)?.click(); } },
+      }),
+      h('div.resultados-material#resultadosMaterial')),
     h('div.mensaje-lectura#mensaje', { role: 'status', 'aria-live': 'assertive' }),
     h('div.ultimo#ultimo'),
     h('div.acumulado-caja', h('h3', 'Acumulado del despacho'), h('div.acumulado#acumulado')),
@@ -68,9 +77,56 @@ export function audioDesbloqueado() { audioListo = true; }
 
 export async function alMostrar() {
   await refrescar();
-  // Si el audio ya se desbloqueó con un toque, la cámara arranca sola al volver.
+  // En Personal la cámara queda encendida para los carnés. En Salidas el material se busca
+  // por nombre y la cámara se abre solo para el carné de quien recibe (ahorra batería).
+  if ((await modo.actual()) === 'salidas') { if (escaner.activo) escaner.detener(); await cargarMateriales(); return; }
   if (audioListo && !escaner.activo) iniciarCamara();
 }
+
+// ---------- Búsqueda de materiales por nombre ----------
+const normal = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
+let materiales = { bodega: null, lista: [] };
+
+/** Productos activos de la finca con cuántas veces han salido (los más usados primero). */
+async function cargarMateriales() {
+  const bod = await bodegas.bodegaActiva();
+  if (!bod) { materiales = { bodega: null, lista: [] }; return; }
+  const usos = new Map();
+  for (const l of await db.porIndice('lineas', 'bodega', bod)) usos.set(l.codigo, (usos.get(l.codigo) || 0) + 1);
+  const prods = await catalogo.productos(bod, { incluirInactivos: false });
+  materiales = { bodega: bod, lista: prods.map((p) => ({ p, n: normal(`${p.nombre} ${p.codigo}`), usos: usos.get(p.codigo) || 0 })) };
+  pintarBusqueda();
+}
+
+function pintarBusqueda() {
+  const input = $('#buscarMaterial', raiz); const caja = $('#resultadosMaterial', raiz);
+  if (!input || !caja) return;
+  const t = normal(input.value);
+  vaciar(caja);
+  if (t.length < 3) {
+    // Sin escribir: los más usados de la finca, para tocar directo.
+    const top = materiales.lista.filter((m) => m.usos).sort((a, b) => b.usos - a.usos).slice(0, 6);
+    if (top.length) caja.append(h('p.material-titulo', 'Los más usados'), ...top.map(opcionMaterial));
+    else if (t.length) caja.append(h('p.nota', 'Escriba al menos 3 letras.'));
+    return;
+  }
+  const palabras = t.split(' ');
+  const enc = materiales.lista.filter((m) => palabras.every((pal) => m.n.split(' ').some((w) => w.startsWith(pal))))
+    .sort((a, b) => b.usos - a.usos || a.p.nombre.localeCompare(b.p.nombre, 'es')).slice(0, 12);
+  if (!enc.length) caja.append(h('p.nota', 'Ningún material de esta finca empieza así.'));
+  else caja.append(...enc.map(opcionMaterial));
+}
+
+const opcionMaterial = (m) => h('button.material-opcion', {
+  type: 'button',
+  onclick: async () => {
+    desbloquearAudio();
+    const input = $('#buscarMaterial', raiz); input.value = ''; input.blur();
+    vaciar($('#resultadosMaterial', raiz));
+    await procesar(qrProducto(materiales.bodega, m.p.codigo));
+    await cargarMateriales();
+  },
+}, h('span.material-nombre', m.p.nombre), h('small', `${m.p.codigo} · ${m.p.unidad}${m.usos ? ` · ${m.usos} salida${m.usos === 1 ? '' : 's'}` : ''}`));
 
 export function alOcultar() {
   if (escaner) escaner.detener();
@@ -133,7 +189,7 @@ export async function refrescar() {
     );
   } else {
     franja.classList.remove('con-despacho');
-    franja.append(h('div.franja-vacia', (await db.ajuste('pedirDestino', false)) ? '① Escanee un DESTINO para abrir un despacho' : '📦 Escanee un PRODUCTO para registrar su salida'));
+    franja.append(h('div.franja-vacia', (await db.ajuste('pedirDestino', false)) ? '① Escanee un DESTINO para abrir un despacho' : '📦 Busque el material: escriba 3 letras abajo'));
   }
   const lineas = d ? await despacho.lineasDe(d.id) : [];
   const ultima = lineas[lineas.length - 1];
@@ -384,6 +440,8 @@ async function pedirQuienRecibe(d, p, cant, sugerida) {
   } finally {
     escaner.interceptor = null;
     escaner.video = videoOriginal;
+    // En Salidas la cámara solo hacía falta para el carné.
+    if ((await modo.actual()) === 'salidas') escaner.detener();
   }
 }
 

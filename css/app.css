@@ -501,3 +501,17 @@ html, body { overflow-x: clip; }
 
 textarea.firma { width: 100%; min-height: 80px; border: 2px solid var(--linea); border-radius: 10px; padding: 8px 12px; font: inherit; }
 .btn-simulador { min-height: 40px; font-size: .9rem; text-decoration: none; }
+
+/* Salidas: buscador de materiales en vez de cámara */
+body[data-modo="salidas"] .pantalla[data-pantalla="escanear"] .camara { display: none; }
+.solo-salidas-bloque { display: none; }
+body[data-modo="salidas"] .solo-salidas-bloque { display: block; }
+.buscador-material { padding: 10px 12px 0; }
+.buscador-material input { width: 100%; min-height: 60px; font-size: 1.35rem; font-weight: 600; border: 3px solid var(--azul); border-radius: 14px; padding: 8px 16px; background: var(--blanco); }
+.buscador-material input:focus { outline: none; border-color: var(--azul-vivo); }
+.resultados-material { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.material-titulo { margin: 4px 2px 0; font-size: .85rem; color: var(--gris); text-transform: uppercase; letter-spacing: .05em; }
+.material-opcion { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-height: 60px; padding: 10px 16px; border-radius: 14px; border: 2px solid var(--linea); background: var(--blanco); text-align: left; cursor: pointer; touch-action: manipulation; }
+.material-opcion:active { background: #e8edf1; }
+.material-nombre { font-size: 1.2rem; font-weight: 700; color: var(--azul-profundo); }
+.material-opcion small { color: var(--gris); }
