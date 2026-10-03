@@ -3,6 +3,7 @@
 
 import * as db from './db.js';
 import * as usuarios from './usuarios.js';
+import { FUNCIONES } from './config.js';
 
 export const MODOS = {
   salidas: { icono: '📦', nombre: 'Salidas de bodega', detalle: 'Materiales, cantidad y quién recibe', permiso: 'salidas' },
@@ -11,7 +12,10 @@ export const MODOS = {
 
 export async function disponibles() {
   const out = [];
-  for (const [clave, m] of Object.entries(MODOS)) if (await usuarios.permite(m.permiso)) out.push(clave);
+  for (const [clave, m] of Object.entries(MODOS)) {
+    if (clave === 'personal' && !FUNCIONES.jornada) continue; // apagado, no borrado
+    if (await usuarios.permite(m.permiso)) out.push(clave);
+  }
   return out;
 }
 

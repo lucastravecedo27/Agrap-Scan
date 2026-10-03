@@ -1,8 +1,14 @@
 // Configuración global de la app. Lo que cambia por versión o por regla de negocio vive aquí.
 
-export const VERSION = '2.7.0';
+export const VERSION = '2.8.0';
 
 export const PIN_POR_DEFECTO = '1234';
+
+// Funciones que se pueden apagar SIN borrar nada: el código, los datos y las jornadas ya
+// registradas se quedan; solo dejan de mostrarse. Para volver a prenderla: true.
+//   jornada → modo Personal, pestaña Jornada, RDT, ingresos de personal nuevo y carnés en
+//             blanco. Los carnés de los trabajadores siguen sirviendo para «¿Quién recibe?».
+export const FUNCIONES = { jornada: false };
 
 // Minutos que dura desbloqueado el modo administrador sin actividad.
 export const MINUTOS_ADMIN = 5;

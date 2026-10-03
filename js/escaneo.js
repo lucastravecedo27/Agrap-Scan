@@ -7,7 +7,7 @@ import * as personas from './personas.js';
 import * as labores from './labores.js';
 import * as jornada from './jornada.js';
 import * as usuarios from './usuarios.js';
-import { RE_CARNE, qrProducto } from './config.js';
+import { RE_CARNE, qrProducto, FUNCIONES } from './config.js';
 import * as modo from './modo.js';
 import * as db from './db.js';
 import * as traspaso from './traspaso.js';
@@ -225,7 +225,7 @@ export async function procesar(texto) {
     // Carné de empleado: jornada (inicio o fin de labor).
     const carne = String(texto || '').trim().match(RE_CARNE);
     const m = await modo.actual();
-    if (carne && m !== 'personal') { error('Está registrando SALIDAS. Para un carné, toque la cabecera y escoja Personal.'); return; }
+    if (carne && m !== 'personal') { error(FUNCIONES.jornada ? 'Está registrando SALIDAS. Para un carné, toque la cabecera y escoja Personal.' : 'El carné se escanea después de la cantidad, en «¿Quién recibe?».'); return; }
     if (!carne && m === 'personal') { error('Está registrando PERSONAL: escanee el carné. Para salidas, toque la cabecera y escoja Salidas.'); return; }
     if (carne) {
       if (!(await usuarios.permite('jornada'))) { error('Su usuario no registra jornadas.'); return; }

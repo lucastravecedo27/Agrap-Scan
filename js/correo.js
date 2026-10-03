@@ -12,7 +12,7 @@ import * as usuarios from './usuarios.js';
 import * as ingresos from './ingresos.js';
 import * as rdt from './rdt.js';
 import { csvDe } from './exportar.js';
-import { VERSION } from './config.js';
+import { VERSION, FUNCIONES } from './config.js';
 import { h, num, hoy, horaLocal, aviso, dialogo } from './ui.js';
 
 const MAX_BITACORA = 50;
@@ -91,10 +91,11 @@ async function enCola() {
 export async function pendiente(bodega) {
   const ya = await enCola();
   const lineas = (await db.porIndice('lineas', 'bodega', bodega)).filter((l) => !l.exportado && !l.correoEn && !ya.lineas.has(l.n));
-  const todas = await db.porIndice('jornadas', 'bodega', bodega);
+  // Con la jornada apagada no van RDT ni ingresos (las jornadas viejas se quedan en la base).
+  const todas = FUNCIONES.jornada ? await db.porIndice('jornadas', 'bodega', bodega) : [];
   const jornadas = todas.filter((j) => j.estado === 'cerrada' && !j.exportado && !j.correoEn && !ya.jornadas.has(j.n));
   const abiertas = todas.filter((j) => j.estado === 'abierta');
-  const ings = (await ingresos.pendientes(bodega)).filter((i) => !i.enviado && !ya.ingresos.has(i.id));
+  const ings = FUNCIONES.jornada ? (await ingresos.pendientes(bodega)).filter((i) => !i.enviado && !ya.ingresos.has(i.id)) : [];
   return { lineas, jornadas, abiertas, ingresos: ings, total: lineas.length + jornadas.length + ings.length };
 }
 

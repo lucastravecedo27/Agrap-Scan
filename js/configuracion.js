@@ -11,7 +11,7 @@ import * as empleados from './empleados.js';
 import * as ingresos from './ingresos.js';
 import * as traspaso from './traspaso.js';
 import * as correo from './correo.js';
-import { formatoCarne } from './config.js';
+import { formatoCarne, FUNCIONES } from './config.js';
 import { VERSION, COLUMNAS_PRODUCTOS, COLUMNAS_DESTINOS } from './config.js';
 import {
   h, vaciar, num, aviso, confirmar, dialogo, formulario, informar, pedirPin,
@@ -163,7 +163,7 @@ async function pintar() {
   raiz.append(await seccionCorreo(true));
   raiz.append(seccionBodegas(lista));
   raiz.append(await seccionUsuarios(lista));
-  raiz.append(await seccionIngresos(lista));
+  if (FUNCIONES.jornada) raiz.append(await seccionIngresos(lista));
   raiz.append(await seccionEmpleados(lista));
   if (estado.bodega) raiz.append(await seccionCatalogo(lista));
   raiz.append(seccionPaquete(lista));
@@ -415,8 +415,10 @@ async function seccionEmpleados(lista) {
   pintarFilas();
   const porFinca = lista.map((b) => `${b.codigo}: ${todos.filter((e) => e.activo !== false && e.fincas.includes(b.codigo)).length}`).join(' · ');
   return h('section.tarjeta',
-    h('h2', 'Empleados · carnés de jornada'),
-    h('p.nota', 'Solo la oficina registra empleados. Cada uno tiene un carné con QR: al empezar labores lo escanea, escoge la labor y la cantidad; al terminar lo escanea otra vez. Las fincas guardan carnés en blanco para personas nuevas. Viajan en el catálogo: después de cambiar algo, envíe el catálogo.'),
+    h('h2', FUNCIONES.jornada ? 'Empleados · carnés de jornada' : 'Empleados · carnés'),
+    h('p.nota', FUNCIONES.jornada
+      ? 'Solo la oficina registra empleados. Cada uno tiene un carné con QR: al empezar labores lo escanea, escoge la labor y la cantidad; al terminar lo escanea otra vez. Las fincas guardan carnés en blanco para personas nuevas. Viajan en el catálogo: después de cambiar algo, envíe el catálogo.'
+      : 'Solo la oficina registra empleados. Cada uno tiene un carné con QR que escanea al recibir material («¿Quién recibe?»). Viajan en el catálogo o con «Pasar empleados al teléfono».'),
     h('p', h('strong', `${todos.filter((e) => e.activo !== false).length} activos`), ` · ${porFinca}`),
     todos.length ? h('div', h('label.campo', buscar), h('div.tabla-scroll.corta', h('table.tabla',
       h('thead', h('tr', h('th', 'Carné'), h('th', 'Código'), h('th', 'Nombre'), h('th', 'Fincas'), h('th', 'Estado'), h('th', ''))), cuerpo))) : h('p.vacio', 'Todavía no hay empleados.'),
@@ -425,7 +427,7 @@ async function seccionEmpleados(lista) {
       h('button.btn.primario', { type: 'button', disabled: !todos.length, onclick: () => pasarAlTelefono(lista) }, '📱 Pasar empleados al teléfono'),
       h('button.btn.secundario', { type: 'button', onclick: () => descargar('plantilla_empleados.csv', 'codigo,nombre,finca\r\n71529,Gonzalez Pushaina Rafael,B01\r\n') }, 'Plantilla CSV'),
       h('button.btn.secundario', { type: 'button', disabled: !todos.length, onclick: () => irALibroCarnes({ bodega: estado.bodega, alcance: 'carnes' }) }, '🖨 Carnés con nombre'),
-      h('button.btn.secundario', { type: 'button', disabled: !lista.length, onclick: () => carnesEnBlanco(lista) }, '🖨 Carnés en blanco para fincas')));
+      FUNCIONES.jornada ? h('button.btn.secundario', { type: 'button', disabled: !lista.length, onclick: () => carnesEnBlanco(lista) }, '🖨 Carnés en blanco para fincas') : null));
 }
 
 /** Muestra en la pantalla del PC el QR con los empleados de una finca para que el teléfono lo lea. */
