@@ -6,13 +6,24 @@ fincas de banano del grupo. Publicada en GitHub Pages: repo `lucastravecedo27/Ag
 | Página | Para quién | URL |
 |---|---|---|
 | `index.html` | iPhone de la finca | https://lucastravecedo27.github.io/Agrap-Scan/ |
-| `oficina.html` | PC de la oficina | …/Agrap-Scan/oficina.html |
+| `oficina.html` | Computador de la oficina (solo PC; la edita el usuario) | https://lucastravecedo27.github.io/Agrap-Scan/oficina.html |
 | `simulador.html` | Probar la finca en el PC sin teléfono | …/Agrap-Scan/simulador.html |
 | `instalar.html` | Instalar en el iPhone | …/Agrap-Scan/instalar.html |
 
 Documento del flujo de trabajo (editable): https://claude.ai/code/artifact/054a0e32-79d3-4fcc-b6a1-7e87a216e989
 
-## Estado al 2026-10-03 · v2.10.0
+## Estado al 2026-10-03 · v2.11.0
+
+- **Las 5 fincas parametrizadas, solo LA ALEGRIA activa** (`bodegas.csv`, columna `activa`).
+  Para prender otra: Oficina › Bodegas › Activar (y enviar catálogo) o `activa=si` en el CSV.
+- **Sin PIN** (pedido del usuario): `FUNCIONES.pin = false` en `js/config.js` (apagado, no
+  borrado). Lo destructivo pide confirmación. **Oficina** sin PIN pero solo en computador
+  (bloqueada en teléfonos) y bloqueada en cualquier equipo donde se escogió una finca
+  (`ajustes.equipoFinca`); la finca ya no tiene enlace a Oficina. Diseño de PC (2 columnas).
+- **El operador** (Ajustes de finca) puede: recibir catálogo, pedir destino, sonido, nombres
+  aprendidos, respaldo/restaurar y **crear un producto nuevo** con el código de WorldOffice
+  (`creadoEnFinca`: el catálogo de la oficina no lo apaga; si el código no existe en WO,
+  Materiales lo devuelve con aviso).
 
 - **Fincas piloto: Don Gaspar (B01) y La Alegría (B04, Ficus Indica, en un PORTÁTIL).** El paquete
   publicado (`datos-iniciales/bodegas|productos|destinos.csv`) lleva solo las piloto, con el ID del
@@ -58,7 +69,7 @@ Documento del flujo de trabajo (editable): https://claude.ai/code/artifact/054a0
    de `datos/salidas` (mismo ID: si quedan los dos, Materiales sigue el de Drive).
 2. Fecha de corte por finca: desde ese día no se digita el cuaderno viejo (si no, se cuenta doble).
 3. Publicar el servicio de correo (`herramientas/correo/LEEME.md`).
-4. Cambiar el PIN 1234 en cada aparato. GitHub con verificación en dos pasos.
+4. GitHub con verificación en dos pasos.
 
 ## Cómo se trabaja aquí
 

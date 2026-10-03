@@ -219,6 +219,9 @@ async function mostrarModos(b, disponibles) {
 }
 
 async function entrar(clave) {
+  // Este aparato queda marcado como de finca: aquí no se abre la Oficina (el simulador del PC, que
+  // corre la finca dentro de un marco, no marca nada).
+  if (window.top === window) await db.fijarAjuste('equipoFinca', true);
   await modo.fijar(clave);
   cerrarLobby();
   await refrescarCabecera();
@@ -240,6 +243,17 @@ function vigilarMateriales() {
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') tocar(); });
 }
 
+/** La Oficina es del computador de la oficina: ni en teléfonos ni en un aparato de finca. */
+async function oficinaBloqueada() {
+  if (!matchMedia('(pointer: fine)').matches || window.innerWidth < 900) {
+    return 'La Oficina se abre en un computador (pantalla grande y mouse). En la finca se usa Agrap Scan.';
+  }
+  if (await db.ajuste('equipoFinca', false)) {
+    return 'Este equipo se usa como finca, y desde la finca no se entra a la Oficina. Ábrala en el computador de la oficina.';
+  }
+  return null;
+}
+
 async function iniciar() {
   $$('.version-app').forEach((e) => { e.textContent = `v${VERSION}`; });
   try {
@@ -247,6 +261,14 @@ async function iniciar() {
   } catch (e) {
     document.body.append(h('div.alerta.alerta-error', `No se pudo abrir la base de datos local: ${e.message}. Salga del modo privado o incógnito del navegador.`));
     return;
+  }
+  if (MODO === 'oficina') {
+    const motivo = await oficinaBloqueada();
+    if (motivo) {
+      $('main').replaceChildren(h('section.tarjeta.oficina-bloqueada', h('h2', '🏢 Oficina'), h('p', motivo)));
+      $('.pestanas').hidden = true;
+      return;
+    }
   }
   fijarSonido(await db.ajuste('sonido', true));
   const pre = await catalogo.precargarSiHaceFalta();

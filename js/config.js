@@ -1,6 +1,6 @@
 // Configuración global de la app. Lo que cambia por versión o por regla de negocio vive aquí.
 
-export const VERSION = '2.10.0';
+export const VERSION = '2.11.0';
 
 export const PIN_POR_DEFECTO = '1234';
 
@@ -8,7 +8,9 @@ export const PIN_POR_DEFECTO = '1234';
 // registradas se quedan; solo dejan de mostrarse. Para volver a prenderla: true.
 //   jornada → modo Personal, pestaña Jornada, RDT, ingresos de personal nuevo y carnés en
 //             blanco. Los carnés de los trabajadores siguen sirviendo para «¿Quién recibe?».
-export const FUNCIONES = { jornada: false };
+// pin: false = sin PIN de encargado ni de oficina (pedido del usuario, 3 oct 2026). Apagado, no
+// borrado: con true vuelve todo (PIN cifrado, cambio obligatorio del 1234, bloqueo).
+export const FUNCIONES = { jornada: false, pin: false };
 
 // Minutos que dura desbloqueado el modo administrador sin actividad.
 export const MINUTOS_ADMIN = 5;

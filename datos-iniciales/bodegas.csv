@@ -1,3 +1,6 @@
-codigo,nombre,finca,responsable,sociedad,cuaderno
-B01,DON GASPAR,DON GASPAR,,Agricolas Travecedo Y Tamara,3283a541-b7ef-411a-9d4b-e0cacc3b5bce
-B04,LA ALEGRIA,LA ALEGRIA,,Ficus Indica,7c50095b-874b-4cfb-b81c-27052250b5ac
+codigo,nombre,finca,responsable,sociedad,cuaderno,activa
+B01,DON GASPAR,DON GASPAR,,Agricolas Travecedo Y Tamara,3283a541-b7ef-411a-9d4b-e0cacc3b5bce,no
+B02,EL REFUGIO,EL REFUGIO,,Agricolas Travecedo Y Tamara,2bac2ef8-381b-472b-b407-38950b990c41,no
+B03,MARIA LAURA,MARIA LAURA,,Ficus Indica,f20db01a-0f66-4427-b752-4d14a4da60b3,no
+B04,LA ALEGRIA,LA ALEGRIA,,Ficus Indica,7c50095b-874b-4cfb-b81c-27052250b5ac,si
+B05,MAROMA,MAROMA,,JM Maroma,74797e38-8154-4fd6-a649-d37d8c681323,no

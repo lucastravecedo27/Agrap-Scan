@@ -522,3 +522,22 @@ body[data-modo="salidas"] .solo-salidas-bloque { display: block; }
 .materiales-auto p { margin: 0 0 8px; }
 .materiales-auto[data-activo="1"] { border-style: solid; background: var(--verde-fondo); }
 .banda-pendientes[data-accion="reconectar"] { cursor: pointer; text-decoration: underline; }
+
+/* ---------- Oficina: diseño de computador (no se abre en teléfonos) ---------- */
+body[data-modo="oficina"] { padding-bottom: 24px; }
+body[data-modo="oficina"] .cabecera { padding-left: 24px; padding-right: 24px; }
+body[data-modo="oficina"] .pestanas {
+  position: sticky; top: 0; z-index: 19; display: flex; justify-content: flex-start; gap: 4px;
+  padding: 0 24px; border-top: 0; border-bottom: 1px solid var(--linea); background: var(--blanco);
+}
+body[data-modo="oficina"] .pestana { flex-direction: row; min-height: 50px; padding: 0 22px; font-size: 1rem; gap: 8px; }
+body[data-modo="oficina"] .pestana span { font-size: 1.15rem; }
+body[data-modo="oficina"] .pestana.activa { box-shadow: inset 0 -3px 0 var(--azul); }
+body[data-modo="oficina"] main { max-width: 1440px; }
+body[data-modo="oficina"] .pantalla[data-pantalla="catalogo"]:not([hidden]) {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: start; padding: 20px 24px;
+}
+body[data-modo="oficina"] .pantalla[data-pantalla="catalogo"] > * { margin: 0; min-width: 0; }
+body[data-modo="oficina"] .pantalla[data-pantalla="catalogo"] > .alerta,
+body[data-modo="oficina"] .pantalla[data-pantalla="catalogo"] > .tarjeta-ancha { grid-column: 1 / -1; }
+.oficina-bloqueada { max-width: 560px; margin: 48px auto; text-align: center; }

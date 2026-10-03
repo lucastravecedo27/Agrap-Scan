@@ -1,8 +1,8 @@
 // Bodegas: alta, edición, desactivación, bodega activa, PIN de administrador y copia de catálogo.
 
 import * as db from './db.js';
-import { PIN_POR_DEFECTO, MINUTOS_ADMIN, RE_BODEGA } from './config.js';
-import { pedirPin, aviso, informar } from './ui.js';
+import { PIN_POR_DEFECTO, MINUTOS_ADMIN, RE_BODEGA, FUNCIONES } from './config.js';
+import { pedirPin, aviso, informar, confirmar } from './ui.js';
 import { sha256 } from './usuarios.js';
 
 // ---------- Bodegas ----------
@@ -22,6 +22,8 @@ export function normalizar(b) {
     sociedad: String(b.sociedad || '').trim(),
     // ID del cuaderno de salidas de esta finca en la app Materiales (hoja «Ficha (no tocar)»)
     cuaderno: String(b.cuaderno || '').trim().toLowerCase(),
+    // Columna opcional del CSV: «no», «0» o «false» = finca configurada pero apagada.
+    ...(b.activa === false || /^(no|0|false)$/i.test(String(b.activa ?? '').trim()) ? { activa: false } : {}),
   };
 }
 
@@ -189,6 +191,7 @@ export const salirAdmin = () => { _adminHasta = 0; };
 
 /** Pide el PIN si el modo administrador no está vigente. Resuelve true/false. */
 export async function exigirAdmin(motivo = '') {
+  if (!FUNCIONES.pin) return true;
   if (adminVigente()) { renovarAdmin(); return true; }
   const pin = await pedirPin('PIN de administrador', motivo);
   if (pin == null) return false;
@@ -200,6 +203,7 @@ export async function exigirAdmin(motivo = '') {
 
 /** Siempre pide el PIN (acciones destructivas), aunque el modo admin esté vigente. */
 export async function exigirPinSiempre(motivo = '') {
+  if (!FUNCIONES.pin) return confirmar('Confirmar', motivo, { si: 'Sí, seguir' });
   const pin = await pedirPin('Confirme con el PIN', motivo);
   if (pin == null) return false;
   return verificar(pin);

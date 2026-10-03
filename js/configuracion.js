@@ -44,7 +44,7 @@ export async function alMostrar() {
 async function pintarFinca() {
   bodegas.renovarAdmin();
   vaciar(raiz);
-  if (await bodegas.pinEsPorDefecto()) {
+  if (FUNCIONES.pin && await bodegas.pinEsPorDefecto()) {
     raiz.append(h('div.alerta.alerta-aviso', h('strong', 'El PIN sigue siendo 1234.'), ' Cámbielo abajo para que nadie más cambie la finca.'));
   }
   const faltaRespaldo = await avisoRespaldo();
@@ -68,6 +68,7 @@ async function pintarFinca() {
     h('h2', 'Salidas'),
     h('label.campo.check', chkDestino, h('span', 'Pedir el DESTINO (lote) antes de los productos')),
     h('p.nota', 'Apagado: al escanear un producto el despacho se abre solo, con destino la finca escogida (lote GENERAL).')));
+  raiz.append(await seccionProductoFinca());
   raiz.append(await seccionCorreo(false));
   raiz.append(await seccionAprendidos(personas, 'Personas que reciben', 'Nombre', 'Entregas', 'Todavía no hay nombres.'));
   raiz.append(await seccionAprendidos(labores, 'Labores', 'Labor', 'Despachos', 'Todavía no se ha escrito ninguna labor nueva.'));
@@ -83,6 +84,42 @@ async function pintarFinca() {
       h('button.btn.secundario', { type: 'button', onclick: probar(sonidoError) }, '🔊 Pito de error')),
     h('p.nota', 'Suba el volumen del iPhone con los botones laterales. El pito suena aunque el interruptor de silencio esté puesto.')));
   raiz.append(await seccionAjustes());
+}
+
+/**
+ * Producto nuevo desde la finca: llegó un material que el catálogo de la app no tiene. Se crea
+ * con el código de WorldOffice; si ese código no existe allá, Materiales lo devuelve con aviso
+ * en el archivo (y aquí sale «con aviso de Materiales»), así que un error no pasa callado.
+ */
+async function seccionProductoFinca() {
+  const bod = await bodegas.bodegaActiva();
+  if (!bod) return null;
+  const unidades = [...new Set((await catalogo.productos(bod)).map((p) => p.unidad).filter(Boolean))].sort();
+  const codigo = h('input', { autocomplete: 'off', placeholder: 'Ej. 0345', inputmode: 'text' });
+  const nombre = h('input', { autocomplete: 'off', placeholder: 'Como está en WorldOffice' });
+  const unidad = h('select', unidades.map((u) => h('option', { value: u, selected: u === 'Und.' }, u)));
+  const crear = async () => {
+    const v = { codigo: codigo.value.trim(), nombre: nombre.value.trim().toUpperCase(), unidad: unidad.value, categoria: 'Creado en finca', creadoEnFinca: true };
+    if (!v.codigo || !v.nombre) { aviso('Escriba el código de WorldOffice y el nombre.', 'error'); return; }
+    const ya = await catalogo.producto(bod, v.codigo);
+    if (ya) { aviso(`El código ${v.codigo} ya existe: ${ya.nombre}. Búsquelo por el nombre en Escanear.`, 'error', 6000); return; }
+    if (!(await confirmar('Crear producto', `${v.codigo} · ${v.nombre} (${v.unidad}) en ${bod}. El código tiene que ser el mismo de WorldOffice; si no, Materiales no lo deja pasar.`, { si: 'Crear' }))) return;
+    try {
+      await catalogo.guardarProducto(bod, v, { nuevo: true });
+      aviso(`${v.nombre} creado. Ya se puede buscar en Escanear.`, 'ok', 5000);
+      alCambio(); pintarFinca();
+    } catch (e) { aviso(e.message, 'error'); }
+  };
+  const creados = (await catalogo.productos(bod)).filter((p) => p.creadoEnFinca);
+  return h('section.tarjeta',
+    h('h2', 'Producto nuevo'),
+    h('p.nota', 'Solo si llegó un material que no sale al buscarlo. Use el código y el nombre de WorldOffice (pregunte a la oficina si no lo sabe).'),
+    h('div.fila-campos',
+      h('label.campo', h('span', 'Código WorldOffice'), codigo),
+      h('label.campo', h('span', 'Nombre'), nombre),
+      h('label.campo', h('span', 'Unidad'), unidad)),
+    h('div.fila-botones', h('button.btn.primario', { type: 'button', onclick: crear }, '+ Crear producto')),
+    creados.length ? h('p.nota', `Creados en esta finca: ${creados.map((p) => `${p.codigo} ${p.nombre}`).join(' · ')}`) : null);
 }
 
 async function seccionAprendidos(lista_, titulo, columna, conteo, vacio) {
@@ -152,7 +189,7 @@ async function pintar() {
   if (!estado.bodega || !lista.find((b) => b.codigo === estado.bodega)) estado.bodega = (await bodegas.bodegaActiva()) || lista[0]?.codigo || null;
   vaciar(raiz);
 
-  if (await bodegas.pinEsPorDefecto()) {
+  if (FUNCIONES.pin && await bodegas.pinEsPorDefecto()) {
     raiz.append(h('div.alerta.alerta-aviso', h('strong', 'El PIN sigue siendo 1234.'), ' Cámbielo abajo en «Seguridad» para que nadie más cambie la finca ni el catálogo.'));
   }
   if ((await db.ajuste('origenDatos')) === 'ejemplo' && lista.some((b) => b.ejemplo)) {
@@ -581,7 +618,7 @@ async function seccionCatalogo(lista) {
   const tabs = h('div.segmentos',
     ['productos', 'destinos'].map((t) => h(`button.segmento${estado.pestana === t ? '.activo' : ''}`, { type: 'button', onclick: () => { estado.pestana = t; pintar(); } }, t === 'productos' ? 'Productos' : 'Destinos')));
   const cuerpo = estado.pestana === 'productos' ? await tablaProductos(cod) : await tablaDestinos(cod);
-  return h('section.tarjeta',
+  return h('section.tarjeta.tarjeta-ancha',
     h('h2', 'Catálogo por bodega'),
     h('label.campo', h('span', 'Bodega'), selBod),
     tabs, cuerpo);
@@ -743,13 +780,12 @@ async function cargarPaquete(lista) {
 async function seccionAjustes() {
   const pinFinca = await db.ajuste('pinCambioFinca', true);
   return h('section.tarjeta',
-    h('h2', 'Seguridad, respaldo y versión'),
-    modo === 'finca' ? h('div.fila-botones', h('a.btn.secundario', { href: './oficina.html' }, '🏢 Abrir Oficina en esta app')) : h('div.fila-botones', h('a.btn.secundario', { href: './' }, '← Volver a la app de la finca')),
-    modo === 'finca' ? h('p.nota', 'En el iPhone la app instalada guarda sus datos aparte de Safari: si maneja la oficina en este teléfono, ábrala desde aquí para que empleados y catálogo queden en la app.') : null,
-    h('div.fila-botones',
+    h('h2', FUNCIONES.pin ? 'Seguridad, respaldo y versión' : 'Respaldo y versión'),
+    // La Oficina no se abre desde la finca: es del computador de la oficina (oficina.html).
+    !FUNCIONES.pin ? null : h('div.fila-botones',
       h('button.btn.primario', { type: 'button', onclick: cambiarPin }, 'Cambiar PIN'),
       h('button.btn.secundario', { type: 'button', onclick: () => { bodegas.salirAdmin(); alMostrar(); } }, 'Salir del modo administrador')),
-    modo !== 'finca' ? null : h('label.campo.check',
+    modo !== 'finca' || !FUNCIONES.pin ? null : h('label.campo.check',
       h('input', { type: 'checkbox', checked: pinFinca, onchange: async (e) => { await db.fijarAjuste('pinCambioFinca', e.target.checked); aviso('Guardado', 'ok'); } }),
       h('span', 'Pedir PIN para escoger una finca distinta en el inicio')),
     h('h3', 'Respaldo'),

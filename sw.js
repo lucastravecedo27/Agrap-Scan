@@ -1,7 +1,7 @@
 // Service worker: todo en caché para uso 100 % offline.
 // Al publicar cambios, subir VERSION (igual que js/config.js): el navegador detecta que
 // este archivo cambió, instala la caché nueva, toma el control y la app se recarga sola.
-const VERSION = '2.10.0';
+const VERSION = '2.11.0';
 const CACHE = `agrap-salidas-${VERSION}`;
 const ARCHIVOS = [
   './', './index.html', './oficina.html', './simulador.html', './instalar.html', './manifest.json',

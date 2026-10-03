@@ -138,6 +138,8 @@ export async function guardarProducto(bodega, datos, { nuevo = false } = {}) {
   if (nuevo && previo) throw new Error(`El código ${registro.codigo} ya existe en ${bodega}.`);
   registro.activo = datos.activo ?? previo?.activo ?? true;
   registro.creado = previo?.creado || new Date().toISOString();
+  // Creado por el operador en la finca: el catálogo de la oficina no lo apaga (ver importarActualizacion).
+  if (datos.creadoEnFinca || previo?.creadoEnFinca) registro.creadoEnFinca = true;
   await db.put('productos', registro);
   return registro;
 }
@@ -329,7 +331,7 @@ export async function importarActualizacion(json, { reemplazarEjemplo = false } 
   // Lo que la oficina ya no tiene se desactiva (no se borra: puede haber líneas que lo citen).
   for (const cod of codigos) {
     const enviados = new Set(prods.filter((p) => p.bodega === cod).map((p) => p.id));
-    const viejos = (await db.porIndice('productos', 'bodega', cod)).filter((p) => !enviados.has(p.id) && p.activo !== false);
+    const viejos = (await db.porIndice('productos', 'bodega', cod)).filter((p) => !enviados.has(p.id) && p.activo !== false && !p.creadoEnFinca);
     await db.putVarios('productos', viejos.map((p) => ({ ...p, activo: false })));
     const enviadosD = new Set(dests.filter((d) => d.bodega === cod).map((d) => d.id));
     const viejosD = (await db.porIndice('destinos', 'bodega', cod)).filter((d) => !enviadosD.has(d.id) && d.activo !== false);

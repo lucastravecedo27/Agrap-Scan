@@ -9,7 +9,8 @@ Lee ./Materiales (la copia de la app de la empresa, solo lectura):
     de salidas de la finca (`salida_archivos`), que es lo que Materiales usa para reconocerlo.
   - referencia/: la categoría de cada producto, igual que generar_datos_iniciales.py.
 
-Uso:  python3 herramientas/agregar_finca_piloto.py B04
+Uso:  python3 herramientas/agregar_finca_piloto.py B04            (activa)
+      python3 herramientas/agregar_finca_piloto.py B02 --inactiva  (configurada, apagada)
 """
 import csv
 import sqlite3
@@ -36,7 +37,7 @@ def escribir(nombre, campos, filas):
         w.writerows(filas)
 
 
-def main(cod_b):
+def main(cod_b, activa=True):
     fila = next((b for b in g.BODEGAS if b[0] == cod_b), None)
     if not fila:
         sys.exit(f"Bodega desconocida: {cod_b}. Conocidas: {', '.join(b[0] for b in g.BODEGAS)}")
@@ -71,21 +72,21 @@ def main(cod_b):
                          "lote": "GENERAL", "labor": "Gasto cargado a otra finca"})
 
     campos_b, bodegas = leer("bodegas.csv")
-    if "cuaderno" not in campos_b:
-        campos_b = campos_b + ["cuaderno"]
+    campos_b = campos_b + [c for c in ("cuaderno", "activa") if c not in campos_b]
     bodegas = [b for b in bodegas if b["codigo"] != cod_b] + [
         {"codigo": cod_b, "nombre": finca, "finca": finca, "responsable": "", "sociedad": sociedad,
-         "cuaderno": cuaderno}]
+         "cuaderno": cuaderno, "activa": "si" if activa else "no"}]
     escribir("bodegas.csv", campos_b, sorted(bodegas, key=lambda b: b["codigo"]))
     for nombre, nuevas in (("productos.csv", productos), ("destinos.csv", destinos)):
         campos, filas = leer(nombre)
         escribir(nombre, campos, [f for f in filas if f["bodega"] != cod_b] + nuevas)
 
-    print(f"{cod_b} {finca} ({sociedad}): {len(productos)} productos, {len(destinos)} destinos, "
+    print(f"{cod_b} {finca} ({sociedad}, {'activa' if activa else 'inactiva'}): {len(productos)} productos, {len(destinos)} destinos, "
           f"cuaderno {cuaderno or 'SIN ID (crear el cuaderno en Materiales)'}")
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    if len(args) != 1:
         sys.exit(__doc__)
-    main(sys.argv[1].upper())
+    main(args[0].upper(), activa="--inactiva" not in sys.argv)
