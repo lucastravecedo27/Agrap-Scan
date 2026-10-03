@@ -515,3 +515,4 @@ body[data-modo="salidas"] .solo-salidas-bloque { display: block; }
 .material-opcion:active { background: #e8edf1; }
 .material-nombre { font-size: 1.2rem; font-weight: 700; color: var(--azul-profundo); }
 .material-opcion small { color: var(--gris); }
+.tarjeta-materiales { border: 3px solid var(--verde); }

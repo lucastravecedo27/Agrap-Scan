@@ -6,6 +6,7 @@ import * as bodegas from './bodegas.js';
 import * as despacho from './despacho.js';
 import { serializar } from './csv.js';
 import * as correo from './correo.js';
+import * as materiales from './materiales.js';
 import { COLUMNAS_EXPORTE, DIAS_RETENCION } from './config.js';
 import {
   $, h, vaciar, num, hoy, fechaLocal, fechaLarga, aviso, confirmar, dialogo,
@@ -198,6 +199,35 @@ export async function borrarViejas() {
   return viejas.length;
 }
 
+// ---------- Excel para la app Materiales (reemplaza el cuaderno digitado) ----------
+async function tarjetaMateriales(bodega) {
+  const b = await bodegas.obtener(bodega);
+  const listo = materiales.uuidValido(b?.cuaderno);
+  const correr = async (forma) => {
+    try {
+      const previo = await materiales.generar(bodega);
+      if (previo.nuevas.length && !(await revisar(previo.nuevas, 'Revise antes de mandar a Materiales'))) return;
+      const x = await materiales.generar(bodega); // con las correcciones de la revisión
+      let salida = 'descargado';
+      if (forma === 'compartir') {
+        salida = await compartirArchivo(x.nombre, x.blob, x.blob.type);
+        if (salida === 'cancelado') { aviso('No se envió. Las salidas siguen pendientes.', 'aviso'); return; }
+        if (salida === 'no-soportado') descargar(x.nombre, x.blob);
+      } else descargar(x.nombre, x.blob);
+      await materiales.marcar(x.lineas);
+      aviso(`${x.nombre}: ${x.lineas.length} salida(s) de los últimos ${materiales.DIAS_ARCHIVO} días (${x.nuevas.length} nuevas).`, 'ok', 6000);
+      alCambio(); pintar();
+    } catch (e) { aviso(e.message, 'error', 7000); }
+  };
+  return h('section.tarjeta.tarjeta-materiales',
+    h('h2', '📗 Excel para Materiales'),
+    h('p.nota', 'Reemplaza el cuaderno de salidas que se digitaba a mano. La encargada lo guarda en lugar del cuaderno de la finca (mismo nombre) y Materiales lo procesa como siempre. Trae los últimos 45 días: lo ya contabilizado Materiales lo salta solo.'),
+    listo ? null : h('p.correo-cola', 'Falta el ID del cuaderno de esta finca en Materiales: la oficina lo pone en Oficina › Bodegas y envía el catálogo.'),
+    h('div.fila-botones',
+      h('button.btn.primario.btn-grande', { type: 'button', disabled: !listo, onclick: () => correr('compartir') }, 'Enviar a la encargada (WhatsApp…)'),
+      h('button.btn.secundario.btn-grande', { type: 'button', disabled: !listo, onclick: () => correr('descargar') }, '↓ Descargar Excel')));
+}
+
 // ---------- Pantalla Registros ----------
 let raiz = null;
 const estado = { alcance: null, fecha: null };
@@ -222,6 +252,7 @@ async function pintar() {
   vaciar(raiz);
   const tCorreo = activa ? await correo.tarjeta(activa, () => { alCambio(); pintar(); }) : null;
   if (tCorreo) raiz.append(tCorreo);
+  if (activa) raiz.append(await tarjetaMateriales(activa));
 
   // --- Exportar ---
   const desde = h('input', { type: 'date', value: estado.fecha });

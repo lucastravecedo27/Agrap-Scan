@@ -11,6 +11,7 @@ import * as empleados from './empleados.js';
 import * as ingresos from './ingresos.js';
 import * as traspaso from './traspaso.js';
 import * as correo from './correo.js';
+import * as materiales from './materiales.js';
 import { formatoCarne, FUNCIONES } from './config.js';
 import { VERSION, COLUMNAS_PRODUCTOS, COLUMNAS_DESTINOS } from './config.js';
 import {
@@ -550,7 +551,8 @@ async function editarBodega(b, lista = []) {
     { nombre: 'nombre', etiqueta: 'Nombre', valor: b?.nombre, requerido: true },
     { nombre: 'finca', etiqueta: 'Finca', valor: b?.finca, requerido: true },
     { nombre: 'responsable', etiqueta: 'Responsable (va en el CSV)', valor: b?.responsable },
-  ], { validar: (x) => bodegas.validar(bodegas.normalizar(x)) });
+    { nombre: 'cuaderno', etiqueta: 'ID del cuaderno en Materiales (hoja «Ficha (no tocar)», fila Cuaderno)', valor: b?.cuaderno, placeholder: '3283a541-b7ef-…' },
+  ], { validar: (x) => bodegas.validar(bodegas.normalizar(x)) || (x.cuaderno && !materiales.uuidValido(x.cuaderno) ? 'El ID del cuaderno no tiene el formato correcto (36 caracteres con guiones).' : null) });
   if (!v) return;
   try {
     await bodegas.guardar({ ...b, ...v }, { nueva: !b });

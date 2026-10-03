@@ -12,6 +12,7 @@ import * as usuarios from './usuarios.js';
 import * as ingresos from './ingresos.js';
 import * as rdt from './rdt.js';
 import { csvDe } from './exportar.js';
+import * as materiales from './materiales.js';
 import { VERSION, FUNCIONES } from './config.js';
 import { h, num, hoy, horaLocal, aviso, dialogo } from './ui.js';
 
@@ -139,8 +140,15 @@ export async function armar(bodega, p, autorizadoPor) {
     adjuntos.push({ nombre: r.nombre, mime: r.blob.type, base64: await aBase64(r.blob) });
   }
   if (p.lineas.length) {
-    const csv = await csvDe(p.lineas);
-    adjuntos.push({ nombre: `salidas_${rango.replace(/-/g, '').replace(' a ', '-')}_${bodega}.csv`, mime: 'text/csv', base64: await aBase64(new Blob([csv])) });
+    // Con el ID del cuaderno configurado va el Excel que procesa Materiales (reemplaza el
+    // cuaderno digitado); si no, el CSV.
+    if (materiales.uuidValido(b?.cuaderno)) {
+      const x = await materiales.generar(bodega);
+      adjuntos.push({ nombre: x.nombre, mime: x.blob.type, base64: await aBase64(x.blob) });
+    } else {
+      const csv = await csvDe(p.lineas);
+      adjuntos.push({ nombre: `salidas_${rango.replace(/-/g, '').replace(' a ', '-')}_${bodega}.csv`, mime: 'text/csv', base64: await aBase64(new Blob([csv])) });
+    }
   }
   if (p.ingresos.length) {
     const json = { app: 'agrap-salidas', tipo: 'ingresos', fecha: new Date().toISOString(), bodega, ingresos: p.ingresos };

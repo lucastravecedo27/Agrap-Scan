@@ -20,6 +20,8 @@ export function normalizar(b) {
     finca: String(b.finca || '').trim(),
     responsable: String(b.responsable || '').trim(),
     sociedad: String(b.sociedad || '').trim(),
+    // ID del cuaderno de salidas de esta finca en la app Materiales (hoja «Ficha (no tocar)»)
+    cuaderno: String(b.cuaderno || '').trim().toLowerCase(),
   };
 }
 

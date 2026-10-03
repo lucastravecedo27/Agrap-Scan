@@ -296,7 +296,7 @@ export async function exportarActualizacion(codigosBodega) {
   const bods = (await bodegas.listar()).filter((b) => codigosBodega.includes(b.codigo));
   const out = { app: 'agrap-salidas', tipo: 'catalogo', fecha: new Date().toISOString(), bodegas: [], productos: [], destinos: [] };
   for (const b of bods) {
-    out.bodegas.push({ codigo: b.codigo, nombre: b.nombre, finca: b.finca, responsable: b.responsable, sociedad: b.sociedad || '', activa: b.activa !== false });
+    out.bodegas.push({ codigo: b.codigo, nombre: b.nombre, finca: b.finca, responsable: b.responsable, sociedad: b.sociedad || '', activa: b.activa !== false, cuaderno: b.cuaderno || '' });
     out.productos.push(...(await db.porIndice('productos', 'bodega', b.codigo)));
     out.destinos.push(...(await db.porIndice('destinos', 'bodega', b.codigo)));
   }
