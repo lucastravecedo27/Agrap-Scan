@@ -63,11 +63,15 @@ Documento del flujo de trabajo (editable): https://claude.ai/code/artifact/054a0
 
 ## Pendientes del usuario
 
+**La Alegría debe quedar implementada el LUNES 5 oct 2026** (instalación, corte del cuaderno viejo y
+primera carga real a WorldOffice ese día). Plan: `~/Desktop/Informe y plan - Salidas La Alegria.pdf`.
+
+
 1. La Alegría: en el portátil instalar Google Drive para escritorio con acceso a la carpeta de
    Materiales, abrir la app en Chrome/Edge, escoger LA ALEGRIA y «Guardar solo…» (ver instalar.html
    › Portátil). En la oficina: contabilizar lo pendiente del cuaderno viejo de La Alegría y sacarlo
    de `datos/salidas` (mismo ID: si quedan los dos, Materiales sigue el de Drive).
-2. Fecha de corte por finca: desde ese día no se digita el cuaderno viejo (si no, se cuenta doble).
+2. Fecha de corte La Alegría: lunes 5 oct (desde ese día no se digita el cuaderno viejo; si no, se cuenta doble).
 3. Publicar el servicio de correo (`herramientas/correo/LEEME.md`).
 4. GitHub con verificación en dos pasos.
 
